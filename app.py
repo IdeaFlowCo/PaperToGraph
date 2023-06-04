@@ -61,4 +61,8 @@ def post():
     else:
         return jsonify(__default_message(message="wrong payload"), 400)
 
-app.run(host="127.0.0.1", port=5001, debug=True) # uncomment to run locally #runningLocally #ref
+# app.run(host="127.0.0.1", port=5001, debug=True) # uncomment to run locally #runningLocally #ref
+
+
+# if __name__ == '__main__':
+#     app.run_server(debug=True, use_reloader=False )
