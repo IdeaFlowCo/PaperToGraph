@@ -34,7 +34,7 @@ Tom Currier\n \
 
 @app.route('/')
 def home():
-   return render_template("index.html")
+   return render_template("indexExtractor.html")
 
 
 @app.route('/extractor')
