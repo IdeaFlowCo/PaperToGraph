@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MD6L3WYG0S"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-MD6L3WYG0S');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NVC Translator</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css" />
+    <script src="https://kit.fontawesome.com/1a48924413.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <!-- nav -->
+
+    <nav class="navigation container">
+        <div class="nav-brand">NVC Translator  –         
+            <span style="font-size: .8em;font-style: italic;">Translate any text to NVC, Marshall Rosenberg's 
+                
+                <a style="color: inherit;" target="_blank" href="https://www.youtube.com/watch?app=desktop&v=Xov5z_GJ9Zs">Nonviolent Communication</a> 
+                (<a style="color: inherit;" target="_blank" href="https://www.amazon.com/Nonviolent-Communication-Language-Life-Changing-Relationships/dp/189200528X">more</a>)
+                </span>
+    </div>
+        <ul class="list-non-bullet nav-pills">
+            <li class="list-item-inline">
+                <a class="link link-active"  href="/">home</a>
+            </li>
+            <li class="list-item-inline">
+                <a class="link" target="_blank" href="https://twitter.com/nvctranslator">gallery</a>
+            </li>
+            <li class="list-item-inline">
+                <a class="link" target="_blank" href="https://github.com/ethanlolomg/nvc-api">github</a>
+            </li>
+            <li class="list-item-inline">
+                <a class="link" target="_blank" href="https://docs.google.com/forms/d/e/1FAIpQLScF-8Na3dmzAXc4JkWGzi24lmNLDIaKfP1zlHh40wlflHg7wQ/viewform">iOS Keyboard*</a>
+            </li>
+            <li class="list-item-inline">
+                <span id="toggleknop" onclick="changeTheme()"><i class="fas fa-moon" id="zon"
+                        style="color:#737eac;"></i></span>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- translator -->
+
+    <div class="container container-center">
+        <header class="hero">
+            <img class="hero-img" style="padding:0 0px 30px 0px;width:auto; height:281px"  src="{{ url_for('static', filename='giraffe_cropped.png') }}" />
+            <!-- <img class="hero-img" style="padding:0 0px 0 0px;width:230px"  src="{{ url_for('static', filename='giraffe_cropped.png') }}" /> -->
+            <h1 class="hero-heading">NVC <span class="heading-inverted"> Translator</span></h1>
+        </header>
+
+        <div class="justify">
+            <textarea id="input-translate" placeholder="Enter text you want to translate, e.g. “You never text me and I feel abandoned.”"></textarea>
+            <!-- <textarea id="input-translate" placeholder="Enter a text you've received, or a text you're thinking to send, that you want to translate, e.g. “You never call me and I feel abandoned”"></textarea> -->
+        </div>
+        <button class="link link-primary" id="btn-translate">Translate</button>
+        <div id="output-translate" contenteditable="true" placeholder="Output of the translation"></div>
+    </div>
+
+    <!-- footer -->
+
+    <footer class="footer">
+        <div class="footer-header">Connect with us on <a href="https://twitter.com/nvctranslator" class="link" style="text-decoration:underline;" target="_blank">Twitter</a></div>
+        <ul class="social-links list-non-bullet">
+            <li class="list-item-inline">
+                <a class="link" target="_blank" href="https://twitter.com/jacobCole4000">
+                    Jacob Cole
+                </a>
+                <a class="link" target="_blank" href="https://twitter.com/oliviali_">
+                    • Olivia Li
+                </a>
+                <a class="link" target="_blank" href="https://twitter.com/tanzealous">
+                    • Tanzeela Khan
+                </a>
+                <a class="link" target="_blank" href="https://twitter.com/ethanchangzrl">
+                    • Ethan Chang
+                </a>
+            </li>
+        </ul>
+        <a class="link" target="_blank" href="https://docs.google.com/forms/d/e/1FAIpQLScF-8Na3dmzAXc4JkWGzi24lmNLDIaKfP1zlHh40wlflHg7wQ/viewform?usp=sf_link">
+            <u>Interested in our iPhone keyboard and Chrome extension?</u>
+        </a>
+    </footer>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+
+</html>

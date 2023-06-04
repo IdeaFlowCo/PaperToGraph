@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MD6L3WYG0S"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-MD6L3WYG0S');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text2Ideaflow</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css" />
+    <script src="https://kit.fontawesome.com/1a48924413.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <!-- nav -->
+
+    <nav class="navigation container">
+        <div class="nav-brand">Text2Ideaflow 
+            </div>
+    </nav>
+
+    <!-- translator -->
+
+    <div class="container container-center">
+        <header class="hero">
+            <!-- <img class="hero-img" style="padding:0 0px 30px 0px;width:auto; height:281px"  src="{{ url_for('static', filename='giraffe_cropped.png') }}" /> -->
+            <!-- <img class="hero-img" style="padding:0 0px 0 0px;width:230px"  src="{{ url_for('static', filename='giraffe_cropped.png') }}" /> -->
+            <!-- <h1 class="hero-heading">NVC <span class="heading-inverted"> Translator</span></h1> -->
+        </header>
+
+        <div class="">
+            <textarea id="input-translate" placeholder="Enter text you want to convert to ideaflow notes"></textarea>
+            <!-- <textarea id="input-translate" placeholder="Enter raw meeting notes you want to structure"></textarea> -->
+        </div>
+        <button class="link link-primary" id="btn-translate">Translate</button>
+        <pre style="font-family: Arial; text-align: left;" id="output-translate" contenteditable="true" placeholder="Output of the translation"></textarea>
+    </div>
+
+    <!-- footer -->
+
+    <!-- <footer class="footer" >
+    </footer> -->
+    <script src="{{ url_for('static', filename='appExtractor.js') }}"></script>
+</body>
+
+</html>
