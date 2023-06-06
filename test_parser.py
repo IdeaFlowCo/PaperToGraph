@@ -1,6 +1,6 @@
 import parser
 
-SAMPLE_INPUT = """
+SAMPLE_LONG_INPUT = """
 Abstract
 Wilms tumour (WT) is a childhood embryonal tumour that is paradigmatic of the intersection between disrupted organogenesis and tumorigenesis. Many WT genes play a critical (non-redundant) role in early nephrogenesis. Improving patient outcomes requires advances in understanding and targeting of the multiple genes and cellular control pathways now identified as active in WT development. Decades of clinical and basic research have helped to gradually optimize clinical care. Curative therapy is achievable in 90% of affected children, even those with disseminated disease, yet survival disparities within and between countries exist and deserve commitment to change. Updated epidemiological studies have also provided novel insights into global incidence variations. Introduction of biology-driven approaches to risk stratification and new drug development has been slower in WT than in other childhood tumours. Current prognostic classification for children with WT is grounded in clinical and pathological findings and in dedicated protocols on molecular alterations. Treatment includes conventional cytotoxic chemotherapy and surgery, and radiation therapy in some cases. Advanced imaging to capture tumour composition, optimizing irradiation techniques to reduce target volumes, and evaluation of newer surgical procedures are key areas for future research.
 
@@ -32,9 +32,25 @@ Influence of sex and age
 WT is one of the few childhood cancers that is more common (~10%) in girls than in boys19. The age-specific incidence of WT peaks at 1 year of age in boys at 17.9 per million person-years. However, in girls, a similar peak remains almost constant at 1, 2 and 3 years of age, with the respective incidences of 17.8, 18.0 and 18.1 per million person-years (Fig. 4).
 """
 
-split_input = parser.__split_to_size(SAMPLE_INPUT)
 
+print('*************')
+print('Splitter info')
+print('*************')
+print()
+print(f'Testing text splitting with hardcoded sample input with length: #{len(SAMPLE_LONG_INPUT)}')
+split_input = parser.__split_to_size(SAMPLE_LONG_INPUT)
+print(f'Sample input split into #{len(split_input)} different chunks.')
+print('Length of each chunk:')
 for chunk in split_input:
     print(len(chunk))
 
+print('\n\n\n')
+
+print('***************')
+print('GPT prompt info')
+print('***************')
+print()
+print('Prompt as will be sent in system message:')
+print('\n-----')
 print(parser.SYSTEM_MESSAGE_CONTENT)
+print('-----')

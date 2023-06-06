@@ -10,18 +10,19 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 SAMPLE_INPUT = (
     "Tom Currier is a great guy who built lots of communities after he studied at Stanford and Harvard. "
     "He also won the Thiel fellowship. "
-    "RPC is a software engineer who has worked at Google, Facebook, and Stripe. "
-    "He studied at the University of Maryland, College Park. "
 )
 
 SAMPLE_OUTPUT = (
     "Tom Currier"
     "\n- studied at: Stanford, Harvard"
-    "\n- winner of: Thiel Fellowship\n"
-    "\n"
-    "RPC"
-    "\n- worked at: Google, Facebook, Stripe"
-    "\n- studied at: University of Maryland, College Park"
+    "\n- winner of: Thiel Fellowship"
+    "\n\n"
+    "{"
+    "\n  \"Tom Currier\": {"
+    "\n    \"studied at\": \"Stanford, Harvard\","
+    "\n    \"winner of\": \"Thiel Fellowship\","
+    "\n  }"
+    "\n}"
 )
 
 SYSTEM_MESSAGE_CONTENT = (
@@ -31,13 +32,20 @@ SYSTEM_MESSAGE_CONTENT = (
     "Make sure to merge the information about extracted entities with any previously extracted information. "
     "\n\n"
     "Input: \n" + SAMPLE_INPUT + "\n\n"
-    "Output: \n" + SAMPLE_OUTPUT + "\n"
+    "Output: \n" + SAMPLE_OUTPUT + "\n\n"
+    "Also, do a second degree of entity extraction on all the entities named as targets, connecting, for instance"
+    "\n\"constitutive Wnt signalling\""
+    "\n- Wnt"
+    "\n"
+    "\n\"part of the β-catenin degradation complex\""
+    "\n- β-catenin"
 )
 
 SYSTEM_MESSAGE = {"role": "system", "content": SYSTEM_MESSAGE_CONTENT}
 
 
 def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
+    print(model)
     messages = [
         SYSTEM_MESSAGE
     ]
@@ -51,14 +59,12 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
         {"role": "user", "content": text}
     )
 
-    # print(messages)
-
     try:
         result = openai.ChatCompletion.create(
             model=model,
             messages=messages,
-            max_tokens=3000,
-            temperature=1.2
+            max_tokens=2000,
+            # temperature=1.2
         )
     except openai.error.RateLimitError:
         # Wait a quarter second and try again
@@ -68,15 +74,22 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
     return result["choices"][0]["message"]["content"]
 
 
+TEXT_BLOCK_SIZE_LIMIT = 3000
+
+
 def __split_to_size(text:str):
     # Split by paragraphs first
     og_text_chunks = list(filter(lambda x : x != '', text.split('\n\n')))
 
+    # Look for any chunks that are still too big
+    # TODO
+
+    # Try to recombine chunks that are smaller than they need to be
     rechunked_text = [og_text_chunks[0]]
     i = 0
     j = 1
     while j < len(og_text_chunks):
-        if len(rechunked_text[i]) + len(og_text_chunks[j]) < 1800:
+        if len(rechunked_text[i]) + len(og_text_chunks[j]) < TEXT_BLOCK_SIZE_LIMIT:
             rechunked_text[i] = rechunked_text[i] + '\n\n' + og_text_chunks[j]
             j += 1
         else:

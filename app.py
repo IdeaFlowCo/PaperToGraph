@@ -48,7 +48,7 @@ def post():
     print(post)
     
     if post is not None:
-        session[SESSION_KEY] = post
+        # session[SESSION_KEY] = post
         return jsonify(__build_parsed_response(post["text"], post["model"]), 201)
     else:
         return jsonify(__wrong_payload_response(), 400)
