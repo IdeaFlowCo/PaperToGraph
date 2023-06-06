@@ -256,3 +256,16 @@ textarea {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Model selector */
+
+.model-selection {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.model-selection label {
+    margin-right: 3ch;
+}

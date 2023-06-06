@@ -1,5 +1,6 @@
 var translate = document.querySelector("#btn-translate");
 var input_translate = document.querySelector("#input-translate")
+var model_selection = document.querySelector('input[name="model-select"]:checked')
 var output_translate = document.querySelector("#output-translate")
 
 // mock server
@@ -10,7 +11,8 @@ var output_translate = document.querySelector("#output-translate")
 var url = "translate"
 
 function urlfunc(url) {
-    return url + "?" + "text=" + input_translate.value
+    model = model_selection?.value ?? 'any';
+    return url + "?" + "model=" + model + "&text=" + input_translate.value
 }
 
 function callback() {

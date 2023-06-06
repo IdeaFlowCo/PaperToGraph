@@ -34,14 +34,14 @@ SYSTEM_MESSAGE_CONTENT = (
 SYSTEM_MESSAGE = {"role": "system", "content": SYSTEM_MESSAGE_CONTENT}
 
 
-def __fetch_parse(message:str):
+def __fetch_parse(message:str, model="gpt-3.5-turbo"):
     messages = [
         SYSTEM_MESSAGE,
         {"role": "user", "content": message}
     ]
 
     result = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model=model,
         messages=messages,
         max_tokens=3000,
         temperature=1.2
@@ -49,6 +49,6 @@ def __fetch_parse(message:str):
     return result["choices"][0]["message"]["content"]
 
 
-def parse_with_gpt(message: str):
-    parsed = __fetch_parse(message)
+def parse_with_gpt(message: str, model="gpt-3.5-turbo"):
+    parsed = __fetch_parse(message, model=model)
     return parsed
