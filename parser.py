@@ -15,11 +15,11 @@ SAMPLE_INPUT = (
 )
 
 SAMPLE_OUTPUT = (
-    "Tom Currier\n "
+    "Tom Currier"
     "\n- studied at: Stanford, Harvard"
     "\n- winner of: Thiel Fellowship\n"
     "\n"
-    "RPC\n"
+    "RPC"
     "\n- worked at: Google, Facebook, Stripe"
     "\n- studied at: University of Maryland, College Park"
 )
@@ -27,7 +27,9 @@ SAMPLE_OUTPUT = (
 SYSTEM_MESSAGE_CONTENT = (
     "Extract the named entities and relations between them in subsequent queries as per the following format. "
     "Specifically list the named entities, then sub-bullets showing each of their relationships after a colon. "
-    "Don't forget newlines between entries."
+    "Don't forget newlines between entries. Also include a JSON version of the output that explicitly shows relationships and targets. "
+    "Make sure to merge the information about extracted entities with any previously extracted information. "
+    "\n\n"
     "Input: \n" + SAMPLE_INPUT + "\n\n"
     "Output: \n" + SAMPLE_OUTPUT + "\n"
 )
@@ -49,7 +51,7 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
         {"role": "user", "content": text}
     )
 
-    print(messages)
+    # print(messages)
 
     try:
         result = openai.ChatCompletion.create(
@@ -68,8 +70,21 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
 
 def __split_to_size(text:str):
     # Split by paragraphs first
-    chunked_text = list(filter(lambda x : x != '', text.split('\n\n')))
-    return chunked_text
+    og_text_chunks = list(filter(lambda x : x != '', text.split('\n\n')))
+
+    rechunked_text = [og_text_chunks[0]]
+    i = 0
+    j = 1
+    while j < len(og_text_chunks):
+        if len(rechunked_text[i]) + len(og_text_chunks[j]) < 1800:
+            rechunked_text[i] = rechunked_text[i] + '\n\n' + og_text_chunks[j]
+            j += 1
+        else:
+            i += 1
+            rechunked_text.append(og_text_chunks[j])
+            j += 1
+
+    return rechunked_text
 
 
 def parse_with_gpt(text: str, model="gpt-3.5-turbo"):
