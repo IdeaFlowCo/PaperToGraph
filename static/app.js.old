@@ -8,17 +8,30 @@ var output_translate = document.querySelector("#output-translate")
 
 
 // actual server
-var url = "translate"
+var url = "post"
 
-function urlfunc(url) {
+function buildUrlForGetRequest(url) {
     model = model_selection?.value ?? 'any';
     return url + "?" + "model=" + model + "&text=" + input_translate.value
 }
 
+function buildBodyForPost() {
+    const model = model_selection?.value ?? 'any';
+    const text = input_translate.value;
+    return {
+      'model': model,
+      'text': text,
+    };
+}
+
 function callback() {
-    fetch(urlfunc(url), {
-        method: 'GET',
+    fetch(url, {
+        method: 'POST',
         mode: 'cors',
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(buildBodyForPost())
       })
         .then(response => response.json())
         .then(json => {
