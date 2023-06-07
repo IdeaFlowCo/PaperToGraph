@@ -129,10 +129,12 @@ def parse_with_gpt(text: str, model="gpt-3.5-turbo"):
 
 
 def parse_generator(text: str, model="gpt-3.5-turbo"):
-    yield ' '    
+    __log_msg('Sending connection heartbeat')
+    yield ' '
     text_chunks = __split_to_size(text)
     parsed = None
     for chunk in text_chunks:
+        __log_msg('Sending connection heartbeat')
         yield ' '
         parsed = __fetch_parse(chunk, prev_context=parsed, model=model)
 
