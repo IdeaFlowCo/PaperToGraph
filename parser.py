@@ -20,10 +20,10 @@ SAMPLE_INPUT = (
 )
 
 SAMPLE_OUTPUT = (
-    "Tom Currier"
-    "\n- studied at: Stanford, Harvard"
-    "\n- winner of: Thiel Fellowship"
-    "\n\n"
+    # "Tom Currier"
+    # "\n- studied at: Stanford, Harvard"
+    # "\n- winner of: Thiel Fellowship"
+    # "\n\n"
     "{"
     "\n  \"Tom Currier\": {"
     "\n    \"studied at\": \"Stanford, Harvard\","
@@ -34,18 +34,18 @@ SAMPLE_OUTPUT = (
 
 SYSTEM_MESSAGE_CONTENT = (
     "Extract the named entities and relations between them in subsequent queries as per the following format. "
-    "Specifically list the named entities, then sub-bullets showing each of their relationships after a colon. "
-    "Don't forget newlines between entries. Also include a JSON version of the output that explicitly shows relationships and targets. "
+    "Specifically list the named entities as JSON objects, with properties for each of their relationships. "
+    "Don't forget newlines between entries."
     "Make sure to merge the information about extracted entities with any previously extracted information. "
     "\n\n"
     "Input: \n" + SAMPLE_INPUT + "\n\n"
     "Output: \n" + SAMPLE_OUTPUT + "\n\n"
-    "Also, do a second degree of entity extraction on all the entities named as targets, connecting, for instance"
-    "\n\"constitutive Wnt signalling\""
-    "\n- Wnt"
-    "\n"
-    "\n\"part of the β-catenin degradation complex\""
-    "\n- β-catenin"
+    # "Also, do a second degree of entity extraction on all the entities named as targets, connecting, for instance"
+    # "\n\"constitutive Wnt signalling\""
+    # "\n- Wnt"
+    # "\n"
+    # "\n\"part of the β-catenin degradation complex\""
+    # "\n- β-catenin"
 )
 
 SYSTEM_MESSAGE = {"role": "system", "content": SYSTEM_MESSAGE_CONTENT}
