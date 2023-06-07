@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import time
 
@@ -5,6 +6,10 @@ import openai
 
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+def __log_msg(msg:str):
+    ts = datetime.now().isoformat(timespec='seconds')
+    print(f'[{ts}] {msg}')
 
 
 SAMPLE_INPUT = (
@@ -66,9 +71,12 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
             # temperature=1.2
         )
     except openai.error.RateLimitError:
+        __log_msg('Rate limit error from OpenAI')
         # Wait a quarter second and try again
         time.sleep(0.25)
         return __fetch_parse(text, prev_context=prev_context, model=model)
+    except Exception as err:
+        __log_msg(f'Error in OpenAI API call: {err}')
 
     return result["choices"][0]["message"]["content"]
 
@@ -95,6 +103,8 @@ def __split_to_size(text:str):
             i += 1
             rechunked_text.append(og_text_chunks[j])
             j += 1
+
+    __log_msg(f'Split into {len(rechunked_text)} blocks of text')
 
     return rechunked_text
 

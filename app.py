@@ -1,4 +1,6 @@
 import argparse
+from datetime import datetime
+import pprint
 
 from flask import Flask, session, request, jsonify, render_template
 
@@ -10,6 +12,20 @@ app.config.update(ENV='development')
 app.config.update(SECRET_KEY='878as7d8f7997dfaewrwv8asdf8)(dS&A&*d78(*&ASD08A')
 
 SESSION_KEY = "json"
+
+
+def __log_msg(msg:str):
+    ts = datetime.now().isoformat(timespec='seconds')
+    print(f'[{ts}] {msg}')
+
+
+def __log_args(args):
+    to_log = args.copy()
+    if 'text' in to_log:
+        if len(to_log['text']) > 150:
+            to_log['text'] = to_log['text'][:150] + '...'
+    to_log = pprint.pformat(to_log, indent=2, width=120)
+    __log_msg(f'Request arguments: \n{to_log}')
 
 
 def __build_parsed_response(message:str, model:str):
@@ -34,6 +50,9 @@ def extractor():
 
 @app.route("/translate", methods=["GET"])
 def get():
+    __log_msg('POST request to /translate endpoint')
+    __log_args(request.args)
+
     # get = session.get(SESSION_KEY)
     text = request.args.get("text")
     model = request.args.get("model")
@@ -45,7 +64,8 @@ def get():
 @app.route("/post", methods=["POST"])
 def post():
     post = request.get_json()
-    # print(post)
+    __log_msg('POST request to /post endpoint')
+    __log_args(post)
     
     if post is not None:
         # session[SESSION_KEY] = post
@@ -60,6 +80,7 @@ if __name__ == '__main__':
     argparser.add_argument('--local', dest='local', action='store_true')
     args = argparser.parse_args()
 
+    __log_msg('Starting server...')
     if args.local:
         app.run(host="127.0.0.1", port=5001, debug=True)
     else:
