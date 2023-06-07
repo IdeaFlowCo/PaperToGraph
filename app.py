@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 from datetime import datetime
 import pprint
 
@@ -35,11 +36,25 @@ def __build_parsed_response(message:str, model:str):
     return {"translation": result}
 
 
+def iter_over_async(ait, loop):
+    ait = ait.__aiter__()
+    async def get_next():
+        try: obj = await ait.__anext__(); return False, obj
+        except StopAsyncIteration: return True, None
+    while True:
+        done, obj = loop.run_until_complete(get_next())
+        if done: break
+        yield obj
+
+
 def __parsed_response_generator(message:str, model:str):
     if model not in ['gpt-3.5-turbo', 'gpt-4']:
         model = 'gpt-3.5-turbo'
         
-    return app.response_class(parser.parse_generator(message, model=model), mimetype='application/json')
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    iter = iter_over_async(parser.parse_generator(message, model=model), loop)
+    return app.response_class(iter, mimetype='application/json')
 
 
 def __wrong_payload_response(message="wrong payload"):

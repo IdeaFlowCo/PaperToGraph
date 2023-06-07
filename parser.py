@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 import json
 import os
@@ -87,6 +88,43 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
     return result
 
 
+async def __async_fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
+    messages = [
+        SYSTEM_MESSAGE
+    ]
+
+    if prev_context:
+        messages.append(
+            {"role": "assistant", "content": prev_context}
+        )
+
+    messages.append(
+        {"role": "user", "content": text}
+    )
+
+    try:
+        __log_msg('Requesting parse from OpenAI...')
+        result = await openai.ChatCompletion.acreate(
+            model=model,
+            messages=messages,
+            max_tokens=2000,
+            # temperature=1.2
+        )
+    except openai.error.RateLimitError:
+        __log_msg('Rate limit error from OpenAI')
+        # Wait a quarter second and try again
+        time.sleep(0.25)
+        return __fetch_parse(text, prev_context=prev_context, model=model)
+    except BaseException as err:
+        __log_msg(f'Error encountered during OpenAI API call: {err}')
+        raise err
+
+    result = result["choices"][0]["message"]["content"]
+    __log_msg('Received parse response from OpenAI')
+    __log_msg(result)
+    return result
+
+
 TEXT_BLOCK_SIZE_LIMIT = 3000
 
 
@@ -128,14 +166,20 @@ def parse_with_gpt(text: str, model="gpt-3.5-turbo"):
     return parsed
 
 
-def parse_generator(text: str, model="gpt-3.5-turbo"):
+async def parse_generator(text: str, model="gpt-3.5-turbo"):
     __log_msg('Sending connection heartbeat')
     yield ' '
     text_chunks = __split_to_size(text)
     parsed = None
     for chunk in text_chunks:
-        __log_msg('Sending connection heartbeat')
-        yield ' '
-        parsed = __fetch_parse(chunk, prev_context=parsed, model=model)
+        parse_task = asyncio.create_task(__async_fetch_parse(chunk, prev_context=parsed, model=model))
+        while True:
+            if parse_task.done():
+                parsed = parse_task.result()
+                break
+            __log_msg('Sending connection heartbeat')
+            yield ' '
+            await asyncio.sleep(10)
 
+    __log_msg('All parsing complete')
     yield json.dumps({"translation": parsed})
