@@ -45,7 +45,7 @@ def get():
 @app.route("/post", methods=["POST"])
 def post():
     post = request.get_json()
-    print(post)
+    # print(post)
     
     if post is not None:
         # session[SESSION_KEY] = post

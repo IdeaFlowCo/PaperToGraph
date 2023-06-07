@@ -1,19 +1,16 @@
 ## NVC API
 
-**Summary**: Simple Flask API for NVC translation using OpenAI
+**Summary**: Simple Flask API for recognizing entities in freeform text using your choice of GPT model.
 
 **Steps**: pip install Flask, pip install openai, set openai api key in app.py, run python3 app.py
 
-To run locally
-uncomment app.py
-app.run(host="127.0.0.1", port=5001, debug=True)
+Install all dependencies for first time set up:
+`pip3 install -r requirements.txt`
 
-
-pip3 install -r requirements.txt
-
-add api key locally
-export OPENAI_API_KEY=sk-API-KEY-HERE
+To add api key locally, set environment variable in your shell:
+`export OPENAI_API_KEY=sk-API-KEY-HERE`
 from https://platform.openai.com/account/api-keys
 
+Then, to run locally, pass `--local` flag:
+`python app.py --local`
 
-python3 app.py

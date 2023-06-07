@@ -20,7 +20,7 @@ SAMPLE_OUTPUT = (
     "{"
     "\n  \"Tom Currier\": {"
     "\n    \"studied at\": \"Stanford, Harvard\","
-    "\n    \"winner of\": \"Thiel Fellowship\","
+    "\n    \"winner of\": \"Thiel Fellowship\""
     "\n  }"
     "\n}"
 )
@@ -45,7 +45,6 @@ SYSTEM_MESSAGE = {"role": "system", "content": SYSTEM_MESSAGE_CONTENT}
 
 
 def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
-    print(model)
     messages = [
         SYSTEM_MESSAGE
     ]
