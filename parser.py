@@ -64,6 +64,7 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
     )
 
     try:
+        __log_msg('Requesting parse from OpenAI...')
         result = openai.ChatCompletion.create(
             model=model,
             messages=messages,
@@ -78,7 +79,10 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
     except Exception as err:
         __log_msg(f'Error in OpenAI API call: {err}')
 
-    return result["choices"][0]["message"]["content"]
+    result = result["choices"][0]["message"]["content"]
+    __log_msg('Received parse response from OpenAI')
+    __log_msg(result)
+    return result
 
 
 TEXT_BLOCK_SIZE_LIMIT = 3000
