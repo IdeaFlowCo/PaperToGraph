@@ -77,8 +77,9 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
         # Wait a quarter second and try again
         time.sleep(0.25)
         return __fetch_parse(text, prev_context=prev_context, model=model)
-    except Exception as err:
-        __log_msg(f'Error in OpenAI API call: {err}')
+    except BaseException as err:
+        __log_msg(f'Error encountered during OpenAI API call: {err}')
+        raise err
 
     result = result["choices"][0]["message"]["content"]
     __log_msg('Received parse response from OpenAI')
