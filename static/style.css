@@ -80,6 +80,7 @@ textarea {
     border-top-right-radius: 1rem;
     border-bottom-left-radius: 1rem;
     font-size: medium;
+    overflow: auto;
 }
 
 /* container */
