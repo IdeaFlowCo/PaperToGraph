@@ -2,6 +2,7 @@ var translate = document.querySelector("#btn-translate");
 var input_translate = document.querySelector("#input-translate")
 var model_selection = document.querySelector('input[name="model-select"]:checked')
 var output_translate = document.querySelector("#output-translate")
+var loading = document.querySelector("#loading");
 
 // mock server
 // var url = "https://lessonfourapi.tanaypratap.repl.co/translate/yoda.json"
@@ -24,7 +25,13 @@ function buildBodyForPost() {
     };
 }
 
-function callback() {
+function handleTranslateClick() {
+
+    // Show spinner
+    loading.style.display = 'block';
+    // Hide translate button
+    translate.style.display = 'none';
+
     fetch(url, {
         method: 'POST',
         mode: 'cors',
@@ -38,28 +45,40 @@ function callback() {
             console.log("json: ", json)
             var output_text = json[0].translation;
             output_translate.innerText = output_text.trim(); // For some reason the response comes back with leading \n's
+
+            // Hide spinner
+            loading.style.display = 'none';
+            // Show translate button
+            translate.style.display = 'block';
+
+
         }).catch(function errorhandler(error) {
-    alert("Something wrong with the server. Please try again later.")
-})
+           // Hide spinner
+            loading.style.display = 'none';
+            // Show translate button
+            translate.style.display = 'block';
+
+            alert("Something wrong with the server. Please try again later.")
+        })
 }
 
-translate.addEventListener("click", callback)
+translate.addEventListener("click", handleTranslateClick);
 
 const currentTheme = localStorage.getItem("theme");
 if (currentTheme == "dark") {
     document.getElementById('toggleknop').innerHTML = '<i class="fas fa-sun" id="zon" style="color:#d8c658;"></i>';
-  document.body.classList.add("dark-theme");
+    document.body.classList.add("dark-theme");
 }
 
 function changeTheme() {
     document.body.classList.toggle("dark-theme");
-  
-  document.getElementById('toggleknop').innerHTML = '<i class="fas fa-moon" id="maan" style="color:#737eac;"></i>';
+    
+    document.getElementById('toggleknop').innerHTML = '<i class="fas fa-moon" id="maan" style="color:#737eac;"></i>';
 
-  let theme = "light";
-  if (document.body.classList.contains("dark-theme")) {
-    document.getElementById('toggleknop').innerHTML = '<i class="fas fa-sun" id="zon" style="color:#d8c658;"></i>';
-    theme = "dark";
-  }
-  localStorage.setItem("theme", theme);
+    let theme = "light";
+    if (document.body.classList.contains("dark-theme")) {
+        document.getElementById('toggleknop').innerHTML = '<i class="fas fa-sun" id="zon" style="color:#d8c658;"></i>';
+        theme = "dark";
+    }
+    localStorage.setItem("theme", theme);
 }

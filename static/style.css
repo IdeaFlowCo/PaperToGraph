@@ -264,6 +264,7 @@ textarea {
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
+    margin-bottom: 0.5em;
 }
 
 .model-selection label {
