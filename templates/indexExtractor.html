@@ -41,8 +41,20 @@
             </textarea>
             <!-- <textarea id="input-translate" placeholder="Enter raw meeting notes you want to structure"></textarea> -->
         </div>
-        <button class="link link-primary" id="btn-translate">Translate</button>
-        <pre style="font-family: Arial; text-align: left;" id="output-translate" contenteditable="true" placeholder="Output of the translation"></textarea>
+
+        <div class="spinner-container">
+            <button class="link link-primary" id="btn-translate">Translate</button>
+            <div id="loading" class="spinner" style="display: none;"></div>
+        </div>
+
+        <!-- <div id="output-translate">Output of the translation</div> -->
+
+        <pre style="font-family: Arial; text-align: left;"
+             id="output-translate" 
+            contenteditable="true" 
+            placeholder="Output of the translation">
+        </pre>
+
     </div>
 
     <!-- footer -->
