@@ -25,41 +25,56 @@ function buildBodyForPost() {
     };
 }
 
-function handleTranslateClick() {
+// async function handleResponse
+
+async function handleTranslateClick() {
 
     // Show spinner
     loading.style.display = 'block';
     // Hide translate button
     translate.style.display = 'none';
 
-    fetch(url, {
+    const response = await fetch(url, {
         method: 'POST',
         mode: 'cors',
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(buildBodyForPost())
-      })
-        .then(response => response.json())
-        .then(json => {
-            console.log("json: ", json)
-            var output_text = json[0].translation;
-            output_translate.innerText = output_text.trim(); // For some reason the response comes back with leading \n's
+      });
 
-            // Hide spinner
-            loading.style.display = 'none';
-            // Show translate button
-            translate.style.display = 'block';
+    let bytesReceived = 0;
+    let responseBody = '';
 
+    try {
+      for await (let chunk of response.body) {
+        console.log(`Received ${chunk.length} bytes`);
+        bytesReceived += chunk.length;
+        chunk = String.fromCharCode(...chunk);
+        console.log(`Chunk: ${chunk}`);
+        responseBody += chunk;
+      }
+      
+      const parsedResponse = JSON.parse(responseBody);
+      console.log('Parsed response json:', parsedResponse);
 
-        }).catch(function errorhandler(error) {
-           // Hide spinner
-            loading.style.display = 'none';
-            // Show translate button
-            translate.style.display = 'block';
+      const output_text = parsedResponse.translation;
+      output_translate.innerText = output_text.trim(); // For some reason the response comes back with leading \n's
 
-            alert("Something wrong with the server. Please try again later.")
-        })
+      // Hide spinner
+      loading.style.display = 'none';
+      // Show translate button
+      translate.style.display = 'block';
+
+    } catch (e) {
+      // Hide spinner
+       loading.style.display = 'none';
+       // Show translate button
+       translate.style.display = 'block';
+
+       console.error(e);
+       alert("Something wrong with the server. Please try again later.");
+    }
 }
 
 translate.addEventListener("click", handleTranslateClick);

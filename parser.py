@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 import os
 import time
 
@@ -114,7 +115,7 @@ def __split_to_size(text:str):
 
 
 def parse_with_gpt(text: str, model="gpt-3.5-turbo"):
-    if len(text) <= 3000:
+    if len(text) <= TEXT_BLOCK_SIZE_LIMIT:
         parsed = __fetch_parse(text, model=model)
         return parsed
     
@@ -124,3 +125,14 @@ def parse_with_gpt(text: str, model="gpt-3.5-turbo"):
         parsed = __fetch_parse(chunk, prev_context=parsed, model=model)
 
     return parsed
+
+
+def parse_generator(text: str, model="gpt-3.5-turbo"):
+    yield ' '    
+    text_chunks = __split_to_size(text)
+    parsed = None
+    for chunk in text_chunks:
+        yield ' '
+        parsed = __fetch_parse(chunk, prev_context=parsed, model=model)
+
+    yield json.dumps({"translation": parsed})

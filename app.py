@@ -35,6 +35,13 @@ def __build_parsed_response(message:str, model:str):
     return {"translation": result}
 
 
+def __parsed_response_generator(message:str, model:str):
+    if model not in ['gpt-3.5-turbo', 'gpt-4']:
+        model = 'gpt-3.5-turbo'
+        
+    return app.response_class(parser.parse_generator(message, model=model), mimetype='application/json')
+
+
 def __wrong_payload_response(message="wrong payload"):
     return {"translation": message}
 
@@ -69,7 +76,8 @@ def post():
     
     if post is not None:
         # session[SESSION_KEY] = post
-        return jsonify(__build_parsed_response(post["text"], post["model"]), 201)
+        # return jsonify(__build_parsed_response(post["text"], post["model"]), 201)
+        return __parsed_response_generator(post['text'], post['model'])
     else:
         return jsonify(__wrong_payload_response(), 400)
 
