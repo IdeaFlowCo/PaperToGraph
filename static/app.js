@@ -5,7 +5,7 @@ var output_translate = document.querySelector("#output-translate")
 var loading = document.querySelector("#loading");
 
 
-function buildBodyForPost() {
+function buildBodyForTranslate() {
     const model_selection = document.querySelector('input[name="model-select"]:checked')
     const model = model_selection?.value ?? 'any';
     const text = input_translate.value;
@@ -15,12 +15,24 @@ function buildBodyForPost() {
     };
 }
 
+function hideButtonsShowSpinner() {
+  // Hide buttons
+  // translate.style.display = 'none';
+  raw_parse_button.style.display = 'none';
+  // Show spinner
+  loading.style.display = 'block';
+}
+
+function showButtonsHideSpinner() {
+  // Hide spinner
+   loading.style.display = 'none';
+   // Show buttons
+  //  translate.style.display = 'inline-block';
+   raw_parse_button.style.display = 'inline-block';
+}
+
 async function handleTranslateClick() {
-    // Show spinner
-    loading.style.display = 'block';
-    // Hide buttons
-    translate.style.display = 'none';
-    raw_parse_button.style.display = 'none';
+    hideButtonsShowSpinner();
 
     const response = await fetch('translate', {
         method: 'POST',
@@ -28,7 +40,7 @@ async function handleTranslateClick() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(buildBodyForPost())
+        body: JSON.stringify(buildBodyForTranslate())
       });
 
     try {
@@ -38,18 +50,10 @@ async function handleTranslateClick() {
       const output_text = parsedResponse.translation;
       output_translate.innerText = output_text.trim(); // For some reason the response comes back with leading \n's
 
-      // Hide spinner
-      loading.style.display = 'none';
-      // Show buttons
-      translate.style.display = 'inline-block';
-      raw_parse_button.style.display = 'inline-block';
+      showButtonsHideSpinner();
 
     } catch (e) {
-      // Hide spinner
-       loading.style.display = 'none';
-       // Show buttons
-       translate.style.display = 'inline-block';
-       raw_parse_button.style.display = 'inline-block';
+      showButtonsHideSpinner();
 
        console.error(e);
     }
@@ -57,11 +61,7 @@ async function handleTranslateClick() {
 // translate.addEventListener("click", handleTranslateClick);
 
 async function handleRawParseClick() {
-    // Show spinner
-    loading.style.display = 'block';
-    // Hide buttons
-    // translate.style.display = 'none';
-    raw_parse_button.style.display = 'none';
+    hideButtonsShowSpinner();
 
     const response = await fetch('raw-parse', {
         method: 'POST',
@@ -69,7 +69,7 @@ async function handleRawParseClick() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(buildBodyForPost())
+        body: JSON.stringify(buildBodyForTranslate())
       });
 
     try {
@@ -79,23 +79,45 @@ async function handleRawParseClick() {
       const output_text = parsedResponse.translation;
       output_translate.innerText = output_text.trim(); // For some reason the response comes back with leading \n's
 
-      // Hide spinner
-      loading.style.display = 'none';
-      // Show buttons
-      // translate.style.display = 'inline-block';
-      raw_parse_button.style.display = 'inline-block';
+      showButtonsHideSpinner();
 
     } catch (e) {
-      // Hide spinner
-       loading.style.display = 'none';
-       // Show buttons
-      //  translate.style.display = 'inline-block';
-       raw_parse_button.style.display = 'inline-block';
+      showButtonsHideSpinner();
 
-       console.error(e);
+      console.error(e);
     }
 }
 raw_parse_button.addEventListener("click", handleRawParseClick);
+
+async function handleSaveClick() {
+  hideButtonsShowSpinner();
+
+  const dataToPost = document.querySelector("#output-translate").innerText.trim();
+
+  const response = await fetch('save-to-neo', {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        'data': dataToPost
+      })
+    });
+
+  try {
+    const parsedResponse = await response.json();
+    console.log('Parsed response json:', parsedResponse);
+
+    showButtonsHideSpinner();
+  } catch (e) {
+    console.error(e);
+
+    showButtonsHideSpinner();
+  }
+}
+const saveToNeoBtn = document.querySelector("#btn-save-to-neo");
+saveToNeoBtn.addEventListener("click", handleSaveClick);
 
 
 function humanByteSize(numBytes) {

@@ -1,11 +1,12 @@
 import argparse
 import asyncio
 from datetime import datetime
-import pprint
+import json
 
 from flask import Flask, request, jsonify, render_template
 
 import parser
+import saver
 
 
 app = Flask(__name__)
@@ -23,7 +24,7 @@ def __log_args(args):
     if 'text' in to_log:
         if len(to_log['text']) > 150:
             to_log['text'] = to_log['text'][:150] + '...'
-    to_log = pprint.pformat(to_log, indent=2, width=120)
+    to_log = json.dumps(to_log, indent=2)
     __log_msg(f'Request arguments: \n{to_log}')
 
 
@@ -98,6 +99,19 @@ def raw_parse():
     
     if post is not None:
         return __raw_parse_response_generator(post['text'], post['model'])
+    else:
+        return jsonify(__wrong_payload_response(), 400)
+
+
+@app.route("/save-to-neo", methods=["POST"])
+def save_to_neo():
+    post = request.get_json()
+    __log_msg('POST request to /save-to-neo endpoint')
+    __log_args(post)
+    
+    if post is not None and 'data' in post:
+        saver.save_json_array(post['data'])
+        return jsonify({'status': 'success'}, 200)
     else:
         return jsonify(__wrong_payload_response(), 400)
 

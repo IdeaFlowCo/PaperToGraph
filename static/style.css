@@ -81,6 +81,7 @@ textarea {
     border-bottom-left-radius: 1rem;
     font-size: medium;
     overflow: auto;
+    max-height: 400px;
 }
 
 /* container */
