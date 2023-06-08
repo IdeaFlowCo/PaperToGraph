@@ -1,4 +1,4 @@
-var translate = document.querySelector("#btn-translate");
+// var translate = document.querySelector("#btn-translate");
 var raw_parse_button = document.querySelector("#btn-raw-parse");
 var input_translate = document.querySelector("#input-translate")
 var output_translate = document.querySelector("#output-translate")
@@ -78,13 +78,13 @@ async function handleTranslateClick() {
        alert("Something wrong with the server. Please try again later.");
     }
 }
-translate.addEventListener("click", handleTranslateClick);
+// translate.addEventListener("click", handleTranslateClick);
 
 async function handleRawParseClick() {
     // Show spinner
     loading.style.display = 'block';
     // Hide buttons
-    translate.style.display = 'none';
+    // translate.style.display = 'none';
     raw_parse_button.style.display = 'none';
 
     const response = await fetch('raw-parse', {
@@ -117,14 +117,14 @@ async function handleRawParseClick() {
       // Hide spinner
       loading.style.display = 'none';
       // Show buttons
-      translate.style.display = 'inline-block';
+      // translate.style.display = 'inline-block';
       raw_parse_button.style.display = 'inline-block';
 
     } catch (e) {
       // Hide spinner
        loading.style.display = 'none';
        // Show buttons
-       translate.style.display = 'inline-block';
+      //  translate.style.display = 'inline-block';
        raw_parse_button.style.display = 'inline-block';
 
        console.error(e);
