@@ -257,23 +257,20 @@ def __group_parse_results(parse_results):
 
 MAX_API_TASKS = 10
 
-async def parse_generator(text: str, model="gpt-3.5-turbo"):
-    __log_msg('Sending connection heartbeat')
-    yield ' '
-    text_chunks = __split_to_size(text)
-    parse_tasks = []
+async def __create_and_run_tasks(task_inputs, task_creator, task_label):
+    tasks = []
     tasks_created = 0
-    tasks_to_create = len(text_chunks)
+    tasks_to_create = len(task_inputs)
     # Make a maximum of 12 tasks at a time to avoid OpenAI rate limit
     for i in range(min(tasks_to_create, MAX_API_TASKS)):
-        chunk = text_chunks[i]
-        parse_tasks.append(asyncio.create_task(__async_fetch_parse(chunk, model=model)))
+        input = task_inputs[i]
+        tasks.append(asyncio.create_task(task_creator(input)))
         tasks_created += 1
-    __log_msg(f'Created {tasks_created} parsing tasks')
+    __log_msg(f'Created {tasks_created} {task_label} tasks')
     # Wait for all tasks to complete
     while True:
         tasks_done = 0
-        for task in parse_tasks:
+        for task in tasks:
             if not task.done():
                 continue
             tasks_done += 1
@@ -283,13 +280,25 @@ async def parse_generator(text: str, model="gpt-3.5-turbo"):
             new_tasks = []
             new_tasks_to_create = min(tasks_to_create - tasks_created, MAX_API_TASKS - tasks_in_progress)
             for i in range(new_tasks_to_create):
-                chunk = text_chunks[tasks_created]
-                new_tasks.append(asyncio.create_task(__async_fetch_parse(chunk, model=model)))
+                input = task_inputs[tasks_created]
+                new_tasks.append(asyncio.create_task(task_creator(input)))
                 tasks_created += 1
-            parse_tasks.extend(new_tasks)
-        __log_msg(f'{tasks_done} out of {tasks_created} parsing tasks completed')
+            tasks.extend(new_tasks)
+        __log_msg(f'{tasks_done} out of {tasks_created} {task_label} tasks completed')
         if tasks_done == tasks_created:
-            parsed = [task.result() for task in parse_tasks]
+            return [task.result() for task in tasks]
+        await asyncio.sleep(5)
+
+async def async_parse_with_gpt(text: str, model="gpt-3.5-turbo"):
+    __log_msg('Sending connection heartbeat')
+    yield ' '
+    text_chunks = __split_to_size(text)
+    parse_task_creator = lambda chunk: __async_fetch_parse(chunk, model=model)
+    all_parsing = asyncio.create_task(__create_and_run_tasks(text_chunks, parse_task_creator, task_label='parsing'))
+    parsed = None
+    while True:
+        if all_parsing.done():
+            parsed = all_parsing.result()
             break
         __log_msg('Sending connection heartbeat')
         yield ' '
@@ -298,36 +307,12 @@ async def parse_generator(text: str, model="gpt-3.5-turbo"):
 
     grouped_parse_results = __group_parse_results(parsed)
     while len(grouped_parse_results) > 1:
+        merge_task_creator = lambda merge_group: __async_fetch_merge(merge_group, model=model)
+        all_merging = asyncio.create_task(__create_and_run_tasks(grouped_parse_results, merge_task_creator, task_label='merge'))
         merge_results = []
-        merge_tasks = []
-        tasks_created = 0
-        tasks_to_create = len(grouped_parse_results)
-        # Make a maximum of 10 tasks at a time to avoid OpenAI rate limit
-        for i in range(min(tasks_to_create, MAX_API_TASKS)):
-            merge_group = grouped_parse_results[i]
-            merge_tasks.append(asyncio.create_task(__async_fetch_merge(merge_group, model=model)))
-            tasks_created += 1
-        __log_msg(f'Created {tasks_created} merge tasks')
-        # Wait for all tasks to complete
         while True:
-            tasks_done = 0
-            for task in merge_tasks:
-                if not task.done():
-                    continue
-                tasks_done += 1
-            tasks_in_progress = tasks_created - tasks_done
-            # Check if we were capped by MAX_API_TASKS and some tasks finished; if so, replace them
-            if tasks_created < tasks_to_create and tasks_in_progress < MAX_API_TASKS:
-                new_tasks = []
-                new_tasks_to_create = min(tasks_to_create - tasks_created, MAX_API_TASKS - tasks_in_progress)
-                for i in range(new_tasks_to_create):
-                    merge_group = grouped_parse_results[tasks_created]
-                    new_tasks.append(asyncio.create_task(__async_fetch_merge(merge_group, model=model)))
-                    tasks_created += 1
-                merge_tasks.extend(new_tasks)
-            __log_msg(f'{tasks_done} out of {tasks_created} merge tasks completed')
-            if tasks_done == tasks_created:
-                merge_results = [task.result() for task in merge_tasks]
+            if all_merging.done():
+                merge_results = all_merging.result()
                 break
             __log_msg('Sending connection heartbeat')
             yield ' '

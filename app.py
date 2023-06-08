@@ -37,6 +37,11 @@ def __build_parsed_response(message:str, model:str):
 
 
 def iter_over_async(ait, loop):
+    '''
+    Make an async generator behave as if it's syncronous.
+    
+    Need this for Flask streaming response.
+    '''
     ait = ait.__aiter__()
     async def get_next():
         try: obj = await ait.__anext__(); return False, obj
@@ -53,7 +58,7 @@ def __parsed_response_generator(message:str, model:str):
         
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    iter = iter_over_async(parser.parse_generator(message, model=model), loop)
+    iter = iter_over_async(parser.async_parse_with_gpt(message, model=model), loop)
     return app.response_class(iter, mimetype='application/json')
 
 
