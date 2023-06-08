@@ -183,10 +183,11 @@ async def __async_fetch_merge(text:str, model="gpt-3.5-turbo"):
 
     try:
         __log_msg('Requesting merge from OpenAI...')
+        max_tokens = 2000 if model == 'gpt-4' else 1000
         result = await openai.ChatCompletion.acreate(
             model=model,
             messages=messages,
-            max_tokens=1000,
+            max_tokens=max_tokens,
             # temperature=1.2
         )
     except openai.error.RateLimitError:
