@@ -1,9 +1,7 @@
 import asyncio
 from datetime import datetime
-from functools import reduce
 import json
 import os
-import pprint
 import time
 
 import openai
@@ -153,9 +151,9 @@ def __clean_json(response):
                         cleaned_value[subkey] = subvalue
                 value = cleaned_value
             cleaned[key] = value
-        to_log = pprint.pformat(cleaned, indent=2, width=160)
-        __log_msg(f'Cleaned up response JSON: \n{to_log}')
-        return json.dumps(cleaned)
+        cleaned = json.dumps(cleaned, indent=2)
+        __log_msg(f'Cleaned up response JSON: \n{cleaned}')
+        return cleaned
     except json.decoder.JSONDecodeError:
         __log_msg('Response not valid JSON!')
         if response.startswith('{'):
@@ -427,6 +425,7 @@ async def async_parse_with_gpt(text: str, model="gpt-3.5-turbo"):
     __log_msg('All parsing complete')
 
     grouped_parse_results = __group_parse_results(parsed)
+    # Merge groups of parse results cumulatively until we're ready for a final merge
     while len(grouped_parse_results) > 1:
         merge_task_creator = lambda merge_group: __async_fetch_merge(merge_group, model=model, skip_on_error=True)
         all_merging = asyncio.create_task(__create_and_run_tasks(grouped_parse_results, merge_task_creator, task_label='merge'))
@@ -442,8 +441,9 @@ async def async_parse_with_gpt(text: str, model="gpt-3.5-turbo"):
         grouped_parse_results = __group_parse_results(merge_results)
     __log_msg('All preliminary merges complete')
 
-    all_parsed_text = '\n'.join(grouped_parse_results)
+    all_parsed_text = grouped_parse_results[0]
     __log_msg('Fetching final merge of all parse outputs')
+    __log_msg(all_parsed_text)
     merge_task = asyncio.create_task(__async_fetch_merge(all_parsed_text, model=model))
     result = ''
     while True:
