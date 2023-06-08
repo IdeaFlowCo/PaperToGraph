@@ -478,11 +478,13 @@ async def async_parse_with_gpt(text: str, model="gpt-3.5-turbo"):
 async def async_parse_without_merging(text: str, model="gpt-3.5-turbo"):
     __log_msg('Sending connection heartbeat')
     yield ' '
-    text_chunks = __split_to_size(text, limit=8000)
+    text_limit = 10000 if model == 'gpt-4' else 8000
+    text_chunks = __split_to_size(text, limit=text_limit)
     # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
     # this is hopefully acceptable behavior.
     # The benefit is that the total parsing is much more resilient with some fault tolerance.
-    parse_task_creator = lambda chunk: __async_fetch_parse(chunk, model=model, max_tokens=1600, skip_on_error=True)
+    max_tokens = 2000 if model == 'gpt-4' else 1600
+    parse_task_creator = lambda chunk: __async_fetch_parse(chunk, model=model, max_tokens=max_tokens, skip_on_error=True)
     all_parsing = asyncio.create_task(__create_and_run_tasks(text_chunks, parse_task_creator, task_label='parsing'))
     parsed = None
     while True:
