@@ -177,7 +177,7 @@ async def __async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
                 model=model,
                 messages=messages,
                 max_tokens=1500,
-                # temperature=1.2
+                temperature=0.5
             )
     except openai.error.RateLimitError:
         __log_msg('Rate limit error from OpenAI')
@@ -258,7 +258,7 @@ async def __async_fetch_merge(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
                 model=model,
                 messages=messages,
                 max_tokens=max_tokens,
-                # temperature=1.2
+                temperature=0.3
             )
     except openai.error.RateLimitError:
         __log_msg('Rate limit error from OpenAI')
@@ -327,9 +327,6 @@ TEXT_BLOCK_SIZE_LIMIT = 6000
 def __split_to_size(text:str):
     # Split by paragraphs first
     og_text_chunks = list(filter(lambda x : x != '', text.split('\n\n')))
-
-    # Look for any chunks that are still too big
-    # TODO
 
     # Try to recombine chunks that are smaller than they need to be
     rechunked_text = [og_text_chunks[0]]
