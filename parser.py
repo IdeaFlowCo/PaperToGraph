@@ -135,15 +135,10 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
     return result
 
 
-async def __async_fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo", skip_on_error=False, prev_timeout=False):
+async def __async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False, should_retry=True):
     messages = [
         PARSE_SYSTEM_MESSAGE
     ]
-
-    if prev_context:
-        messages.append(
-            {"role": "assistant", "content": prev_context}
-        )
 
     messages.append(
         {"role": "user", "content": text}
@@ -161,23 +156,23 @@ async def __async_fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"
     except openai.error.RateLimitError:
         __log_msg('Rate limit error from OpenAI')
         # Wait a quarter second and try again
+        # This is common enough and the exception triggers fast enough that it
+        # doesn't "use up" a retry in our logic.
         await asyncio.sleep(0.25)
         return await __async_fetch_parse(
             text, 
-            prev_context=prev_context, 
             model=model, 
             skip_on_error=skip_on_error, 
-            prev_timeout=prev_timeout
+            should_retry=should_retry
         )
     except TimeoutError:
-        if not prev_timeout:
+        if should_retry:
             __log_msg(f'Parse request timeout. Trying again one more time...')
             return await __async_fetch_parse(
-                text, 
-                prev_context=prev_context, 
-                model=model, 
-                skip_on_error=skip_on_error, 
-                prev_timeout=True
+                text,
+                model=model,
+                skip_on_error=skip_on_error,
+                should_retry=False
             )
         __log_msg(f'Parse request timed out multiple times.')
         if skip_on_error:
@@ -185,6 +180,14 @@ async def __async_fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"
         raise TimeoutError
     except BaseException as err:
         __log_msg(f'Error encountered during OpenAI API call: {err}')
+        if should_retry:
+            __log_msg(f'Trying again one more time...')
+            return await __async_fetch_parse(
+                text,
+                model=model,
+                skip_on_error=skip_on_error,
+                should_retry=False
+            )
         if skip_on_error:
             return ''
         raise err
@@ -195,7 +198,7 @@ async def __async_fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"
     return result
 
 
-async def __async_fetch_merge(text:str, model="gpt-3.5-turbo", skip_on_error=False, prev_timeout=False):
+async def __async_fetch_merge(text:str, model="gpt-3.5-turbo", skip_on_error=False, should_retry=True):
     messages = [
         MERGE_SYSTEM_MESSAGE
     ]
@@ -216,22 +219,24 @@ async def __async_fetch_merge(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
             )
     except openai.error.RateLimitError:
         __log_msg('Rate limit error from OpenAI')
-        # Wait a quarter second and try again
+        # Wait a quarter second and try again.
+        # This is common enough and the exception triggers fast enough that it
+        # doesn't "use up" a retry in our logic.
         await asyncio.sleep(0.25)
         return await __async_fetch_merge(
             text,
             model=model, 
             skip_on_error=skip_on_error, 
-            prev_timeout=prev_timeout
+            should_retry=should_retry
         )
     except TimeoutError:
-        if not prev_timeout:
+        if should_retry:
             __log_msg(f'Merge request timeout. Trying again one more time...')
             return await __async_fetch_merge(
                 text, 
                 model=model, 
                 skip_on_error=skip_on_error, 
-                prev_timeout=True
+                should_retry=False
             )
         __log_msg(f'Merge request timed out multiple times.')
         if skip_on_error:
@@ -239,6 +244,14 @@ async def __async_fetch_merge(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
         raise TimeoutError
     except BaseException as err:
         __log_msg(f'Error encountered during OpenAI API call: {err}')
+        if should_retry:
+            __log_msg(f'Trying again one more time...')
+            return await __async_fetch_parse(
+                text,
+                model=model,
+                skip_on_error=skip_on_error,
+                should_retry=False
+            )
         if skip_on_error:
             return ''
         raise err
