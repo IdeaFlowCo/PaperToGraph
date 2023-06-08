@@ -3,6 +3,7 @@ from datetime import datetime
 from functools import reduce
 import json
 import os
+import pprint
 import time
 
 import openai
@@ -37,7 +38,7 @@ PARSE_SYSTEM_MESSAGE_CONTENT = (
     "Extract the named entities and relations between them in subsequent queries as per the following format. "
     "Specifically list the named entities as JSON objects, with properties for each of their relationships. "
     "Ignore any named entities that do not have specified relationships to other entities. "
-    "Don't forget newlines between entries."
+    "Don't forget newlines between entries and make sure that response is valid JSON."
     # "Make sure to merge the information about extracted entities with any previously extracted information. "
     "\n\n"
     "Input: \n" + SAMPLE_PARSE_INPUT + "\n\n"
@@ -89,7 +90,7 @@ SAMPLE_MERGE_OUTPUT = (
 MERGE_SYSTEM_MESSAGE_CONTENT = (
     "The following queries will provide JSON objects representing different entites and their relationships. "
     "Merge the provided JSON objects so that each entity has only one JSON object with properties for all deduplicated relationships."
-    "Remove any entity objects that do not have any relationship properties."
+    "Remove any entity objects that do not have any relationship properties. Make sure the final result is valid JSON."
     "\n\n"
     "Input: \n" + SAMPLE_MERGE_INPUT + "\n\n"
     "Output: \n" + SAMPLE_MERGE_OUTPUT + "\n\n"
@@ -134,6 +135,33 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
     __log_msg(result)
     return result
 
+
+def __clean_json(response):
+    cleaned = {}
+    try:
+        response_dict = json.loads(response)
+        for key, value in response_dict.items():
+            # We want to skip the empty values to avoid overloading GPT in subsequent queries.
+            if not value:
+                continue
+            if isinstance(value, dict):
+                cleaned_value = {}
+                # Sometimes a dict will have a bunch of key => empty dict pairs inside of it for some reason?
+                # Trim those too.
+                for subkey, subvalue in value.items():
+                    if subvalue:
+                        cleaned_value[subkey] = subvalue
+                value = cleaned_value
+            cleaned[key] = value
+        to_log = pprint.pformat(cleaned, indent=2, width=160)
+        __log_msg(f'Cleaned up response JSON: \n{to_log}')
+        return json.dumps(cleaned)
+    except json.decoder.JSONDecodeError:
+        __log_msg('Response not valid JSON!')
+        if response.startswith('{'):
+            # Response isn't valid JSON but may be close enough that it can still be used, so we'll just return it as-is
+            return response
+        return None
 
 async def __async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False, should_retry=True):
     messages = [
@@ -195,7 +223,8 @@ async def __async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
     result = result["choices"][0]["message"]["content"].strip()
     __log_msg('Received parse response from OpenAI')
     __log_msg(result)
-    if not result.startswith('{'):
+    result = __clean_json(result)
+    if result is None:
         if should_retry:
             __log_msg("Doesn't look like GPT gave us JSON. Trying again one more time...")
             return await __async_fetch_parse(
@@ -275,7 +304,8 @@ async def __async_fetch_merge(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
     result = result["choices"][0]["message"]["content"].strip()
     __log_msg('Received merge response from OpenAI')
     __log_msg(result)
-    if not result.startswith('{'):
+    result = __clean_json(result)
+    if result is None:
         if should_retry:
             __log_msg("Doesn't look like GPT gave us JSON. Trying again one more time...")
             return await __async_fetch_parse(
@@ -410,6 +440,7 @@ async def async_parse_with_gpt(text: str, model="gpt-3.5-turbo"):
             await asyncio.sleep(10)
         # Potentially redo grouping and merging for long lists
         grouped_parse_results = __group_parse_results(merge_results)
+    __log_msg('All preliminary merges complete')
 
     all_parsed_text = '\n'.join(grouped_parse_results)
     __log_msg('Fetching final merge of all parse outputs')
@@ -422,5 +453,7 @@ async def async_parse_with_gpt(text: str, model="gpt-3.5-turbo"):
         __log_msg('Sending connection heartbeat')
         yield ' '
         await asyncio.sleep(10)
+
+    __log_msg('Final merge complete, resturning result')
 
     yield json.dumps({"translation": result})
