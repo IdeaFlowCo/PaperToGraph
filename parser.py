@@ -135,7 +135,7 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
     return result
 
 
-async def __async_fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
+async def __async_fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo", skip_on_error=False, prev_timeout=False):
     messages = [
         PARSE_SYSTEM_MESSAGE
     ]
@@ -151,19 +151,42 @@ async def __async_fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"
 
     try:
         __log_msg('Requesting parse from OpenAI...')
-        result = await openai.ChatCompletion.acreate(
-            model=model,
-            messages=messages,
-            max_tokens=1500,
-            # temperature=1.2
-        )
+        async with asyncio.timeout(90):
+            result = await openai.ChatCompletion.acreate(
+                model=model,
+                messages=messages,
+                max_tokens=1500,
+                # temperature=1.2
+            )
     except openai.error.RateLimitError:
         __log_msg('Rate limit error from OpenAI')
         # Wait a quarter second and try again
         await asyncio.sleep(0.25)
-        return await __fetch_parse(text, prev_context=prev_context, model=model)
+        return await __async_fetch_parse(
+            text, 
+            prev_context=prev_context, 
+            model=model, 
+            skip_on_error=skip_on_error, 
+            prev_timeout=prev_timeout
+        )
+    except TimeoutError:
+        if not prev_timeout:
+            __log_msg(f'Parse request timeout. Trying again one more time...')
+            return await __async_fetch_parse(
+                text, 
+                prev_context=prev_context, 
+                model=model, 
+                skip_on_error=skip_on_error, 
+                prev_timeout=True
+            )
+        __log_msg(f'Parse request timed out multiple times.')
+        if skip_on_error:
+            return ''
+        raise TimeoutError
     except BaseException as err:
         __log_msg(f'Error encountered during OpenAI API call: {err}')
+        if skip_on_error:
+            return ''
         raise err
 
     result = result["choices"][0]["message"]["content"]
@@ -172,7 +195,7 @@ async def __async_fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"
     return result
 
 
-async def __async_fetch_merge(text:str, model="gpt-3.5-turbo"):
+async def __async_fetch_merge(text:str, model="gpt-3.5-turbo", skip_on_error=False, prev_timeout=False):
     messages = [
         MERGE_SYSTEM_MESSAGE
     ]
@@ -184,19 +207,40 @@ async def __async_fetch_merge(text:str, model="gpt-3.5-turbo"):
     try:
         __log_msg('Requesting merge from OpenAI...')
         max_tokens = 2000 if model == 'gpt-4' else 1000
-        result = await openai.ChatCompletion.acreate(
-            model=model,
-            messages=messages,
-            max_tokens=max_tokens,
-            # temperature=1.2
-        )
+        async with asyncio.timeout(120):
+            result = await openai.ChatCompletion.acreate(
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+                # temperature=1.2
+            )
     except openai.error.RateLimitError:
         __log_msg('Rate limit error from OpenAI')
         # Wait a quarter second and try again
         await asyncio.sleep(0.25)
-        return await __async_fetch_merge(text, model=model)
+        return await __async_fetch_merge(
+            text,
+            model=model, 
+            skip_on_error=skip_on_error, 
+            prev_timeout=prev_timeout
+        )
+    except TimeoutError:
+        if not prev_timeout:
+            __log_msg(f'Merge request timeout. Trying again one more time...')
+            return await __async_fetch_merge(
+                text, 
+                model=model, 
+                skip_on_error=skip_on_error, 
+                prev_timeout=True
+            )
+        __log_msg(f'Merge request timed out multiple times.')
+        if skip_on_error:
+            return ''
+        raise TimeoutError
     except BaseException as err:
         __log_msg(f'Error encountered during OpenAI API call: {err}')
+        if skip_on_error:
+            return ''
         raise err
 
     result = result["choices"][0]["message"]["content"]
@@ -255,7 +299,7 @@ def __group_parse_results(parse_results):
     return grouped
 
 
-MAX_API_TASKS = 10
+MAX_API_TASKS = 8
 
 async def __create_and_run_tasks(task_inputs, task_creator, task_label):
     tasks = []
@@ -293,7 +337,10 @@ async def async_parse_with_gpt(text: str, model="gpt-3.5-turbo"):
     __log_msg('Sending connection heartbeat')
     yield ' '
     text_chunks = __split_to_size(text)
-    parse_task_creator = lambda chunk: __async_fetch_parse(chunk, model=model)
+    # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
+    # this is hopefully acceptable behavior.
+    # The benefit is that the total parsing is much more resilient with some fault tolerance.
+    parse_task_creator = lambda chunk: __async_fetch_parse(chunk, model=model, skip_on_error=True)
     all_parsing = asyncio.create_task(__create_and_run_tasks(text_chunks, parse_task_creator, task_label='parsing'))
     parsed = None
     while True:
@@ -307,7 +354,7 @@ async def async_parse_with_gpt(text: str, model="gpt-3.5-turbo"):
 
     grouped_parse_results = __group_parse_results(parsed)
     while len(grouped_parse_results) > 1:
-        merge_task_creator = lambda merge_group: __async_fetch_merge(merge_group, model=model)
+        merge_task_creator = lambda merge_group: __async_fetch_merge(merge_group, model=model, skip_on_error=True)
         all_merging = asyncio.create_task(__create_and_run_tasks(grouped_parse_results, merge_task_creator, task_label='merge'))
         merge_results = []
         while True:
