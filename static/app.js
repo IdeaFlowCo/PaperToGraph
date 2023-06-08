@@ -4,18 +4,6 @@ var input_translate = document.querySelector("#input-translate")
 var output_translate = document.querySelector("#output-translate")
 var loading = document.querySelector("#loading");
 
-// mock server
-// var url = "https://lessonfourapi.tanaypratap.repl.co/translate/yoda.json"
-
-
-// actual server
-var url = "post"
-
-function buildUrlForGetRequest(url) {
-    const model_selection = document.querySelector('input[name="model-select"]:checked')
-    model = model_selection?.value ?? 'any';
-    return url + "?" + "model=" + model + "&text=" + input_translate.value
-}
 
 function buildBodyForPost() {
     const model_selection = document.querySelector('input[name="model-select"]:checked')
@@ -34,7 +22,7 @@ async function handleTranslateClick() {
     translate.style.display = 'none';
     raw_parse_button.style.display = 'none';
 
-    const response = await fetch(url, {
+    const response = await fetch('translate', {
         method: 'POST',
         mode: 'cors',
         headers: {
@@ -43,19 +31,8 @@ async function handleTranslateClick() {
         body: JSON.stringify(buildBodyForPost())
       });
 
-    let bytesReceived = 0;
-    let responseBody = '';
-
     try {
-      for await (let chunk of response.body) {
-        console.log(`Received ${chunk.length} bytes`);
-        bytesReceived += chunk.length;
-        chunk = String.fromCharCode(...chunk);
-        console.log(`Chunk: ${chunk}`);
-        responseBody += chunk;
-      }
-      
-      const parsedResponse = JSON.parse(responseBody);
+      const parsedResponse = await response.json();
       console.log('Parsed response json:', parsedResponse);
 
       const output_text = parsedResponse.translation;
@@ -75,7 +52,6 @@ async function handleTranslateClick() {
        raw_parse_button.style.display = 'inline-block';
 
        console.error(e);
-      //  alert("Something wrong with the server. Please try again later.");
     }
 }
 // translate.addEventListener("click", handleTranslateClick);
@@ -96,19 +72,8 @@ async function handleRawParseClick() {
         body: JSON.stringify(buildBodyForPost())
       });
 
-    let bytesReceived = 0;
-    let responseBody = '';
-
     try {
-      for await (let chunk of response.body) {
-        console.log(`Received ${chunk.length} bytes`);
-        bytesReceived += chunk.length;
-        chunk = String.fromCharCode(...chunk);
-        console.log(`Chunk: ${chunk}`);
-        responseBody += chunk;
-      }
-      
-      const parsedResponse = JSON.parse(responseBody);
+      const parsedResponse = await response.json();
       console.log('Parsed response json:', parsedResponse);
 
       const output_text = parsedResponse.translation;
@@ -128,7 +93,6 @@ async function handleRawParseClick() {
        raw_parse_button.style.display = 'inline-block';
 
        console.error(e);
-       alert("Something wrong with the server. Please try again later.");
     }
 }
 raw_parse_button.addEventListener("click", handleRawParseClick);
