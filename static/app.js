@@ -26,8 +26,6 @@ function buildBodyForPost() {
     };
 }
 
-// async function handleResponse
-
 async function handleTranslateClick() {
 
     // Show spinner
@@ -79,6 +77,42 @@ async function handleTranslateClick() {
 }
 
 translate.addEventListener("click", handleTranslateClick);
+
+
+function humanByteSize(numBytes) {
+  if (numBytes < 1000) {
+    return '<1kB';
+  }
+  if (numBytes < 1000000) {
+    return `${(numBytes / 1000).toFixed(1)} kB`;
+  }
+  return `${(numBytes / 1000000).toFixed(1)} mB`;
+}
+
+function calcInputTextLength() {
+  const input = document.querySelector("#input-translate").value;
+  const byteLength = input.length * 2; // 2 bytes per character for non-emoji English text
+  const humanBytes = humanByteSize(byteLength);
+
+  const textLengthLabel = document.querySelector('#text-length');
+  textLengthLabel.innerText = `Text length: ${humanBytes}`
+}
+
+function calcInputWordCount() {
+  const input = document.querySelector("#input-translate").value;
+  const wordCount = input.trim().split(/\s+/).length;
+
+  const wordCountLabel = document.querySelector('#word-count');
+  wordCountLabel.innerText = `Word count: ${wordCount}`
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  calcInputTextLength();
+  calcInputWordCount();
+  input_translate.addEventListener('change', calcInputTextLength);
+  input_translate.addEventListener('change', calcInputWordCount);
+});
+
 
 const currentTheme = localStorage.getItem("theme");
 if (currentTheme == "dark") {

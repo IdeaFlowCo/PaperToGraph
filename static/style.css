@@ -271,3 +271,21 @@ textarea {
 .model-selection label {
     margin-right: 3ch;
 }
+
+/* Text info */
+
+#text-info {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+
+    margin-top: -0.5em;
+    margin-bottom: 0.5em;
+}
+
+.info-label {
+    font-size: 0.8em;
+    color: #555;
+    margin-right: 3ch;
+}
