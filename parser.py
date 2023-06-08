@@ -498,11 +498,12 @@ async def async_parse_without_merging(text: str, model="gpt-3.5-turbo"):
 
     result = []
     for parsed_obj_str in parsed:
-        # Some of these won't have been recognizable JSON, will be blank; skip them
-        if not parsed_obj_str:
+        try:
+            result.append(json.loads(parsed_obj_str))
+        except json.decoder.JSONDecodeError:
+            # Some of these won't have been recognizable JSON; skip them
             continue
-        result.append(json.loads(parsed_obj_str))
-    result = json.dumps(result, indent=2)
-    yield json.dumps({"translation": result})
+        
+    yield json.dumps({"translation": result}, indent=2)
 
 

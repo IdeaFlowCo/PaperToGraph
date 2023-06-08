@@ -47,8 +47,8 @@ async function handleTranslateClick() {
       const parsedResponse = await response.json();
       console.log('Parsed response json:', parsedResponse);
 
-      const output_text = parsedResponse.translation;
-      output_translate.innerText = output_text.trim(); // For some reason the response comes back with leading \n's
+      const output = parsedResponse.translation;
+      output_translate.innerText = JSON.stringify(output, null, "  ");
 
       showButtonsHideSpinner();
 
@@ -76,8 +76,8 @@ async function handleRawParseClick() {
       const parsedResponse = await response.json();
       console.log('Parsed response json:', parsedResponse);
 
-      const output_text = parsedResponse.translation;
-      output_translate.innerText = output_text.trim(); // For some reason the response comes back with leading \n's
+      const output = parsedResponse.translation;
+      output_translate.innerText = JSON.stringify(output, null, "  ");
 
       showButtonsHideSpinner();
 
