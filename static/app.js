@@ -75,7 +75,7 @@ async function handleTranslateClick() {
        raw_parse_button.style.display = 'inline-block';
 
        console.error(e);
-       alert("Something wrong with the server. Please try again later.");
+      //  alert("Something wrong with the server. Please try again later.");
     }
 }
 // translate.addEventListener("click", handleTranslateClick);
