@@ -129,7 +129,7 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
         __log_msg(f'Error encountered during OpenAI API call: {err}')
         raise err
 
-    result = result["choices"][0]["message"]["content"]
+    result = result["choices"][0]["message"]["content"].strip()
     __log_msg('Received parse response from OpenAI')
     __log_msg(result)
     return result
@@ -192,9 +192,24 @@ async def __async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
             return ''
         raise err
 
-    result = result["choices"][0]["message"]["content"]
+    result = result["choices"][0]["message"]["content"].strip()
     __log_msg('Received parse response from OpenAI')
     __log_msg(result)
+    if not result.startswith('{'):
+        if should_retry:
+            __log_msg("Doesn't look like GPT gave us JSON. Trying again one more time...")
+            return await __async_fetch_parse(
+                text,
+                model=model,
+                skip_on_error=skip_on_error,
+                should_retry=False
+            )
+        if skip_on_error:
+            __log_msg(
+                "Doesn't look like GPT gave us JSON. "
+                "No reties left and skip_on_error=true, so returning blank to contain damages."
+            )
+            return ''
     return result
 
 
@@ -209,7 +224,8 @@ async def __async_fetch_merge(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
 
     try:
         __log_msg('Requesting merge from OpenAI...')
-        max_tokens = 2000 if model == 'gpt-4' else 1000
+        # GPT-4 has higher capacity so we can use more tokens for it
+        max_tokens = 2000 if model == 'gpt-4' else 1200
         async with asyncio.timeout(120):
             result = await openai.ChatCompletion.acreate(
                 model=model,
@@ -256,9 +272,24 @@ async def __async_fetch_merge(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
             return ''
         raise err
 
-    result = result["choices"][0]["message"]["content"]
+    result = result["choices"][0]["message"]["content"].strip()
     __log_msg('Received merge response from OpenAI')
     __log_msg(result)
+    if not result.startswith('{'):
+        if should_retry:
+            __log_msg("Doesn't look like GPT gave us JSON. Trying again one more time...")
+            return await __async_fetch_parse(
+                text,
+                model=model,
+                skip_on_error=skip_on_error,
+                should_retry=False
+            )
+        if skip_on_error:
+            __log_msg(
+                "Doesn't look like GPT gave us JSON. "
+                "No reties left and skip_on_error=true, so returning blank to contain damages."
+            )
+            return ''
     return result
 
 
