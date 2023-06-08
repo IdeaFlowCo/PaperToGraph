@@ -160,7 +160,7 @@ async def __async_fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"
     except openai.error.RateLimitError:
         __log_msg('Rate limit error from OpenAI')
         # Wait a quarter second and try again
-        time.sleep(0.25)
+        await asyncio.sleep(0.25)
         return await __fetch_parse(text, prev_context=prev_context, model=model)
     except BaseException as err:
         __log_msg(f'Error encountered during OpenAI API call: {err}')
@@ -192,7 +192,7 @@ async def __async_fetch_merge(text:str, model="gpt-3.5-turbo"):
     except openai.error.RateLimitError:
         __log_msg('Rate limit error from OpenAI')
         # Wait a quarter second and try again
-        time.sleep(0.25)
+        await asyncio.sleep(0.25)
         return await __async_fetch_merge(text, model=model)
     except BaseException as err:
         __log_msg(f'Error encountered during OpenAI API call: {err}')
@@ -204,7 +204,7 @@ async def __async_fetch_merge(text:str, model="gpt-3.5-turbo"):
     return result
 
 
-TEXT_BLOCK_SIZE_LIMIT = 4000
+TEXT_BLOCK_SIZE_LIMIT = 6000
 
 
 def __split_to_size(text:str):
@@ -253,21 +253,41 @@ def __group_parse_results(parse_results):
         parse_results = parse_results[3:]
     return grouped
 
+
+MAX_API_TASKS = 10
+
 async def parse_generator(text: str, model="gpt-3.5-turbo"):
     __log_msg('Sending connection heartbeat')
     yield ' '
     text_chunks = __split_to_size(text)
     parse_tasks = []
-    for i in range(len(text_chunks)):
-        # __log_msg(f'Parsing text chunk {i + 1} of {len(text_chunks)}')
+    tasks_created = 0
+    tasks_to_create = len(text_chunks)
+    # Make a maximum of 12 tasks at a time to avoid OpenAI rate limit
+    for i in range(min(tasks_to_create, MAX_API_TASKS)):
         chunk = text_chunks[i]
         parse_tasks.append(asyncio.create_task(__async_fetch_parse(chunk, model=model)))
-        # parse_task = asyncio.create_task(__async_fetch_parse(chunk, model=model))
-    __log_msg(f'Created {len(parse_tasks)} parsing tasks')
+        tasks_created += 1
+    __log_msg(f'Created {tasks_created} parsing tasks')
+    # Wait for all tasks to complete
     while True:
-        tasks_done = reduce(lambda count, task: count + 1 if task.done() else count, parse_tasks, 0)
-        __log_msg(f'{tasks_done} out of {len(parse_tasks)} parsing tasks completed')
-        if tasks_done == len(parse_tasks):
+        tasks_done = 0
+        for task in parse_tasks:
+            if not task.done():
+                continue
+            tasks_done += 1
+        tasks_in_progress = tasks_created - tasks_done
+        # Check if we were capped by MAX_API_TASKS and some tasks finished; if so, replace them
+        if tasks_created < tasks_to_create and tasks_in_progress < MAX_API_TASKS:
+            new_tasks = []
+            new_tasks_to_create = min(tasks_to_create - tasks_created, MAX_API_TASKS - tasks_in_progress)
+            for i in range(new_tasks_to_create):
+                chunk = text_chunks[tasks_created]
+                new_tasks.append(asyncio.create_task(__async_fetch_parse(chunk, model=model)))
+                tasks_created += 1
+            parse_tasks.extend(new_tasks)
+        __log_msg(f'{tasks_done} out of {tasks_created} parsing tasks completed')
+        if tasks_done == tasks_created:
             parsed = [task.result() for task in parse_tasks]
             break
         __log_msg('Sending connection heartbeat')
@@ -279,15 +299,33 @@ async def parse_generator(text: str, model="gpt-3.5-turbo"):
     while len(grouped_parse_results) > 1:
         merge_results = []
         merge_tasks = []
-        for i in range(len(grouped_parse_results)):
-            __log_msg(f'Merging parse group {i + 1} of {len(grouped_parse_results)}')
+        tasks_created = 0
+        tasks_to_create = len(grouped_parse_results)
+        # Make a maximum of 10 tasks at a time to avoid OpenAI rate limit
+        for i in range(min(tasks_to_create, MAX_API_TASKS)):
             merge_group = grouped_parse_results[i]
             merge_tasks.append(asyncio.create_task(__async_fetch_merge(merge_group, model=model)))
-        __log_msg(f'Created {len(merge_tasks)} merge tasks')
+            tasks_created += 1
+        __log_msg(f'Created {tasks_created} merge tasks')
+        # Wait for all tasks to complete
         while True:
-            tasks_done = reduce(lambda count, task: count + 1 if task.done() else count, merge_tasks, 0)
-            __log_msg(f'{tasks_done} out of {len(merge_tasks)} merge tasks completed')
-            if tasks_done == len(merge_tasks):
+            tasks_done = 0
+            for task in merge_tasks:
+                if not task.done():
+                    continue
+                tasks_done += 1
+            tasks_in_progress = tasks_created - tasks_done
+            # Check if we were capped by MAX_API_TASKS and some tasks finished; if so, replace them
+            if tasks_created < tasks_to_create and tasks_in_progress < MAX_API_TASKS:
+                new_tasks = []
+                new_tasks_to_create = min(tasks_to_create - tasks_created, MAX_API_TASKS - tasks_in_progress)
+                for i in range(new_tasks_to_create):
+                    merge_group = grouped_parse_results[tasks_created]
+                    new_tasks.append(asyncio.create_task(__async_fetch_merge(merge_group, model=model)))
+                    tasks_created += 1
+                merge_tasks.extend(new_tasks)
+            __log_msg(f'{tasks_done} out of {tasks_created} merge tasks completed')
+            if tasks_done == tasks_created:
                 merge_results = [task.result() for task in merge_tasks]
                 break
             __log_msg('Sending connection heartbeat')
@@ -296,7 +334,7 @@ async def parse_generator(text: str, model="gpt-3.5-turbo"):
         # Potentially redo grouping and merging for long lists
         grouped_parse_results = __group_parse_results(merge_results)
 
-    all_parsed_text = '\n'.join(parsed)
+    all_parsed_text = '\n'.join(grouped_parse_results)
     __log_msg('Fetching final merge of all parse outputs')
     merge_task = asyncio.create_task(__async_fetch_merge(all_parsed_text, model=model))
     result = ''

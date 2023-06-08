@@ -1,6 +1,5 @@
 var translate = document.querySelector("#btn-translate");
 var input_translate = document.querySelector("#input-translate")
-var model_selection = document.querySelector('input[name="model-select"]:checked')
 var output_translate = document.querySelector("#output-translate")
 var loading = document.querySelector("#loading");
 
@@ -12,11 +11,13 @@ var loading = document.querySelector("#loading");
 var url = "post"
 
 function buildUrlForGetRequest(url) {
+    const model_selection = document.querySelector('input[name="model-select"]:checked')
     model = model_selection?.value ?? 'any';
     return url + "?" + "model=" + model + "&text=" + input_translate.value
 }
 
 function buildBodyForPost() {
+    const model_selection = document.querySelector('input[name="model-select"]:checked')
     const model = model_selection?.value ?? 'any';
     const text = input_translate.value;
     return {
