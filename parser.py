@@ -52,22 +52,26 @@ PARSE_SYSTEM_MESSAGE = {"role": "system", "content": PARSE_SYSTEM_MESSAGE_CONTEN
 
 
 SAMPLE_MERGE_INPUT = (
-    "{"
+    "\n---"
+    "\n{"
     "\n  \"Tom Currier\": {"
     "\n    \"studied at\": \"Stanford, Harvard\","
     "\n  }"
     "\n}"
+    "\n---"
     "\n{"
     "\n  \"RPC\": {"
     "\n    \"studied at\": \"University of Maryland\","
     "\n  }"
     "\n}"
+    "\n---"
     "\n{"
     "\n  \"Tom Currier\": {"
     "\n    \"winner of\": \"Thiel Fellowship\""
     "\n  }"
     "\n}"
     "\n}"
+    "\n---"
     "\n{"
     "\n  \"Empty\": {}"
     "\n}"
@@ -87,6 +91,7 @@ SAMPLE_MERGE_OUTPUT = (
 
 MERGE_SYSTEM_MESSAGE_CONTENT = (
     "The following queries will provide JSON objects representing different entites and their relationships. "
+    "Each provided block of information will be separated by the character sequence \"---\"\n"
     "Merge the provided JSON objects so that each entity has only one JSON object with properties for all deduplicated relationships."
     "Remove any entity objects that do not have any relationship properties. Make sure the final result is valid JSON."
     "\n\n"
@@ -133,10 +138,12 @@ def __fetch_parse(text:str, prev_context=None, model="gpt-3.5-turbo"):
     __log_msg(result)
     return result
 
-
 def __clean_json(response):
     cleaned = {}
     try:
+        if response.startswith('Output:'):
+            # Remove extraneous "Output:" signifier that shows up sometimes.
+            response = response[len('Output:'):].strip()
         response_dict = json.loads(response)
         for key, value in response_dict.items():
             # We want to skip the empty values to avoid overloading GPT in subsequent queries.
@@ -149,19 +156,26 @@ def __clean_json(response):
                 for subkey, subvalue in value.items():
                     if subvalue:
                         cleaned_value[subkey] = subvalue
+                # Check that the cleaned up value dict actually has anything in it; if not, skip
+                if not cleaned_value:
+                    continue
                 value = cleaned_value
+            else:
+                # Sometimes we get really long string pairs that are more trouble than they are informative
+                if len(key) + len(value) > 200:
+                    continue
             cleaned[key] = value
         cleaned = json.dumps(cleaned, indent=2)
         __log_msg(f'Cleaned up response JSON: \n{cleaned}')
         return cleaned
     except json.decoder.JSONDecodeError:
         __log_msg('Response not valid JSON!')
-        if response.startswith('{'):
+        if '{' in response:
             # Response isn't valid JSON but may be close enough that it can still be used, so we'll just return it as-is
             return response
         return None
 
-async def __async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False, should_retry=True):
+async def __async_fetch_parse(text:str, model="gpt-3.5-turbo", max_tokens=1500, skip_on_error=False, should_retry=True):
     messages = [
         PARSE_SYSTEM_MESSAGE
     ]
@@ -172,11 +186,11 @@ async def __async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
 
     try:
         __log_msg('Requesting parse from OpenAI...')
-        async with asyncio.timeout(90):
+        async with asyncio.timeout(60):
             result = await openai.ChatCompletion.acreate(
                 model=model,
                 messages=messages,
-                max_tokens=1500,
+                max_tokens=max_tokens,
                 temperature=0.5
             )
     except openai.error.RateLimitError:
@@ -187,7 +201,8 @@ async def __async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
         await asyncio.sleep(0.25)
         return await __async_fetch_parse(
             text, 
-            model=model, 
+            model=model,
+            max_tokens=max_tokens,
             skip_on_error=skip_on_error, 
             should_retry=should_retry
         )
@@ -197,6 +212,7 @@ async def __async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
             return await __async_fetch_parse(
                 text,
                 model=model,
+                max_tokens=max_tokens,
                 skip_on_error=skip_on_error,
                 should_retry=False
             )
@@ -211,6 +227,7 @@ async def __async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
             return await __async_fetch_parse(
                 text,
                 model=model,
+                max_tokens=max_tokens,
                 skip_on_error=skip_on_error,
                 should_retry=False
             )
@@ -228,6 +245,7 @@ async def __async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
             return await __async_fetch_parse(
                 text,
                 model=model,
+                max_tokens=max_tokens,
                 skip_on_error=skip_on_error,
                 should_retry=False
             )
@@ -251,6 +269,7 @@ async def __async_fetch_merge(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
 
     try:
         __log_msg('Requesting merge from OpenAI...')
+        __log_msg(text)
         # GPT-4 has higher capacity so we can use more tokens for it
         max_tokens = 2000 if model == 'gpt-4' else 1200
         async with asyncio.timeout(120):
@@ -324,7 +343,7 @@ async def __async_fetch_merge(text:str, model="gpt-3.5-turbo", skip_on_error=Fal
 TEXT_BLOCK_SIZE_LIMIT = 6000
 
 
-def __split_to_size(text:str):
+def __split_to_size(text:str, limit=TEXT_BLOCK_SIZE_LIMIT):
     # Split by paragraphs first
     og_text_chunks = list(filter(lambda x : x != '', text.split('\n\n')))
 
@@ -333,7 +352,7 @@ def __split_to_size(text:str):
     i = 0
     j = 1
     while j < len(og_text_chunks):
-        if len(rechunked_text[i]) + len(og_text_chunks[j]) < TEXT_BLOCK_SIZE_LIMIT:
+        if len(rechunked_text[i]) + len(og_text_chunks[j]) < limit:
             rechunked_text[i] = rechunked_text[i] + '\n\n' + og_text_chunks[j]
             j += 1
         else:
@@ -363,7 +382,7 @@ def __group_parse_results(parse_results):
     grouped = []
     while len(parse_results):
         to_group = parse_results[:3]
-        grouped.append('\n'.join(to_group))
+        grouped.append('\n---\n'.join(to_group))
         parse_results = parse_results[3:]
     return grouped
 
@@ -454,3 +473,27 @@ async def async_parse_with_gpt(text: str, model="gpt-3.5-turbo"):
     __log_msg('Final merge complete, resturning result')
 
     yield json.dumps({"translation": result})
+
+
+async def async_parse_without_merging(text: str, model="gpt-3.5-turbo"):
+    __log_msg('Sending connection heartbeat')
+    yield ' '
+    text_chunks = __split_to_size(text, limit=8000)
+    # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
+    # this is hopefully acceptable behavior.
+    # The benefit is that the total parsing is much more resilient with some fault tolerance.
+    parse_task_creator = lambda chunk: __async_fetch_parse(chunk, model=model, max_tokens=1600, skip_on_error=True)
+    all_parsing = asyncio.create_task(__create_and_run_tasks(text_chunks, parse_task_creator, task_label='parsing'))
+    parsed = None
+    while True:
+        if all_parsing.done():
+            parsed = all_parsing.result()
+            break
+        __log_msg('Sending connection heartbeat')
+        yield ' '
+        await asyncio.sleep(10)
+    __log_msg('All parsing complete')
+    result = '\n---\n'.join(parsed)
+    yield json.dumps({"translation": result})
+
+

@@ -1,4 +1,5 @@
 var translate = document.querySelector("#btn-translate");
+var raw_parse_button = document.querySelector("#btn-raw-parse");
 var input_translate = document.querySelector("#input-translate")
 var output_translate = document.querySelector("#output-translate")
 var loading = document.querySelector("#loading");
@@ -27,11 +28,11 @@ function buildBodyForPost() {
 }
 
 async function handleTranslateClick() {
-
     // Show spinner
     loading.style.display = 'block';
-    // Hide translate button
+    // Hide buttons
     translate.style.display = 'none';
+    raw_parse_button.style.display = 'none';
 
     const response = await fetch(url, {
         method: 'POST',
@@ -62,21 +63,75 @@ async function handleTranslateClick() {
 
       // Hide spinner
       loading.style.display = 'none';
-      // Show translate button
-      translate.style.display = 'block';
+      // Show buttons
+      translate.style.display = 'inline-block';
+      raw_parse_button.style.display = 'inline-block';
 
     } catch (e) {
       // Hide spinner
        loading.style.display = 'none';
-       // Show translate button
-       translate.style.display = 'block';
+       // Show buttons
+       translate.style.display = 'inline-block';
+       raw_parse_button.style.display = 'inline-block';
 
        console.error(e);
        alert("Something wrong with the server. Please try again later.");
     }
 }
-
 translate.addEventListener("click", handleTranslateClick);
+
+async function handleRawParseClick() {
+    // Show spinner
+    loading.style.display = 'block';
+    // Hide buttons
+    translate.style.display = 'none';
+    raw_parse_button.style.display = 'none';
+
+    const response = await fetch('raw-parse', {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(buildBodyForPost())
+      });
+
+    let bytesReceived = 0;
+    let responseBody = '';
+
+    try {
+      for await (let chunk of response.body) {
+        console.log(`Received ${chunk.length} bytes`);
+        bytesReceived += chunk.length;
+        chunk = String.fromCharCode(...chunk);
+        console.log(`Chunk: ${chunk}`);
+        responseBody += chunk;
+      }
+      
+      const parsedResponse = JSON.parse(responseBody);
+      console.log('Parsed response json:', parsedResponse);
+
+      const output_text = parsedResponse.translation;
+      output_translate.innerText = output_text.trim(); // For some reason the response comes back with leading \n's
+
+      // Hide spinner
+      loading.style.display = 'none';
+      // Show buttons
+      translate.style.display = 'inline-block';
+      raw_parse_button.style.display = 'inline-block';
+
+    } catch (e) {
+      // Hide spinner
+       loading.style.display = 'none';
+       // Show buttons
+       translate.style.display = 'inline-block';
+       raw_parse_button.style.display = 'inline-block';
+
+       console.error(e);
+       alert("Something wrong with the server. Please try again later.");
+    }
+}
+raw_parse_button.addEventListener("click", handleRawParseClick);
 
 
 function humanByteSize(numBytes) {
