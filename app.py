@@ -3,10 +3,26 @@ import asyncio
 from datetime import datetime
 import json
 
+import sentry_sdk
+
 from flask import Flask, request, jsonify, render_template
+from sentry_sdk.integrations.flask import FlaskIntegration
 
 import parser
 import saver
+
+
+sentry_sdk.init(
+    dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
+    integrations=[
+        FlaskIntegration(),
+    ],
+
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # Sentry recommends adjusting this value in production.
+    traces_sample_rate=1.0
+)
 
 
 app = Flask(__name__)
