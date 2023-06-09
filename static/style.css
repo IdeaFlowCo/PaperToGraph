@@ -156,7 +156,13 @@ textarea {
     margin: 1rem 1rem 1rem 0rem;
 
     border: 1px solid var(--primary-color);
-    ;
+    cursor: pointer;
+}
+
+.link-primary:disabled {
+    color: grey;
+    border: 1px solid grey;
+    cursor: default;
 }
 
 .link-secondary {
@@ -289,4 +295,20 @@ textarea {
     font-size: 0.8em;
     color: #555;
     margin-right: 3ch;
+}
+
+/* Error message */
+
+.error-msg {
+    width: fit-content;
+    position: relative;
+    padding: 0.75rem 1.25rem;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 3rem;
+
+    color: #721c24;
+    background-color: #f8d7da;
+    border: 1px solid #cf5c6b;
+    border-radius: 0.25rem;
 }

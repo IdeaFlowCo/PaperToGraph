@@ -56,7 +56,11 @@
             <!-- <button class="link link-primary" id="btn-translate">Translate</button> -->
             <!-- <button class="link link-secondary" id="btn-raw-parse">Raw parse</button> -->
             <button class="link link-primary" id="btn-raw-parse">Translate</button>
-            <div id="loading" class="spinner" style="display: none;"></div>
+            <div id="translate-loading" class="spinner" style="display: none;"></div>
+        </div>
+
+        <div id="translate-error" class="error-msg" style="display: none;">
+            Error encountered while trying to extract information. Please try again in a few seconds.
         </div>
 
         <pre style="font-family: Arial; text-align: left;"
@@ -65,7 +69,14 @@
             placeholder="Output of the translation">
         </pre>
 
-        <button class="link link-primary" id="btn-save-to-neo">Save to Neo4j</button>
+        <div class="spinner-container">
+            <button class="link link-primary" id="btn-save-to-neo">Save to Neo4j</button>
+            <div id="save-loading" class="spinner" style="display: none;"></div>
+        </div>
+
+        <div id="save-error" class="error-msg" style="display: none;">
+            Error encountered while trying to save data. Please try again in a few seconds.
+        </div>
 
     </div>
 
@@ -73,6 +84,10 @@
 
     <!-- <footer class="footer" >
     </footer> -->
+    <script
+    src="https://js.sentry-cdn.com/4226949e3a1d4812b5c26d55888d470d.min.js"
+    crossorigin="anonymous"
+    ></script>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 

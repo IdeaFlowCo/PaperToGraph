@@ -1,38 +1,73 @@
-// var translate = document.querySelector("#btn-translate");
-var raw_parse_button = document.querySelector("#btn-raw-parse");
-var input_translate = document.querySelector("#input-translate")
-var output_translate = document.querySelector("#output-translate")
-var loading = document.querySelector("#loading");
+const translateInput = document.querySelector("#input-translate");
+
+// const translate = document.querySelector("#btn-translate");
+const rawParseButton = document.querySelector("#btn-raw-parse");
+const translateSpinner = document.querySelector("#translate-loading");
+
+const translateErrorMsg = document.querySelector('#translate-error');
+
+const translateOutput = document.querySelector("#output-translate");
+
+const saveToNeoBtn = document.querySelector("#btn-save-to-neo");
+const saveSpinner = document.querySelector('#save-loading');
+
+const saveErrorMsg = document.querySelector('#save-error');
 
 
 function buildBodyForTranslate() {
     const model_selection = document.querySelector('input[name="model-select"]:checked')
     const model = model_selection?.value ?? 'any';
-    const text = input_translate.value;
+    const text = translateInput.value;
     return {
       'model': model,
       'text': text,
     };
 }
 
-function hideButtonsShowSpinner() {
-  // Hide buttons
+function showSpinnerForTranslate() {
+  // Hide translate buttons
   // translate.style.display = 'none';
-  raw_parse_button.style.display = 'none';
+  rawParseButton.style.display = 'none';
   // Show spinner
-  loading.style.display = 'block';
+  translateSpinner.style.display = 'block';
+  // Disable Save to Neo4j button
+ saveToNeoBtn.disabled = true;
 }
 
-function showButtonsHideSpinner() {
+function hideSpinnerForTranslate() {
   // Hide spinner
-   loading.style.display = 'none';
-   // Show buttons
-  //  translate.style.display = 'inline-block';
-   raw_parse_button.style.display = 'inline-block';
+  translateSpinner.style.display = 'none';
+  // Show translate buttons
+  // translate.style.display = 'inline-block';
+  rawParseButton.style.display = 'inline-block';
+  // Re-enable Save to Neo4j button
+  saveToNeoBtn.disabled = false;
+}
+
+function showSpinnerForSave() {
+  // Hide save button
+  // translate.style.display = 'none';
+  saveToNeoBtn.style.display = 'none';
+  // Show spinner
+  saveSpinner.style.display = 'block';
+  // Disable translate buttons
+  // translate.disabled = true;
+  rawParseButton.disabled = true;
+}
+
+function hideSpinnerForSave() {
+  // Hide spinner
+  saveSpinner.style.display = 'none';
+  // Re-enable translate buttons
+  // translate.disabled = false;
+  rawParseButton.disabled = false;
+  // Show Save to Neo4j button
+  saveToNeoBtn.style.display = 'inline-block';
 }
 
 async function handleTranslateClick() {
-    hideButtonsShowSpinner();
+    translateErrorMsg.style.display = 'none';
+    showSpinnerForTranslate();
 
     const response = await fetch('translate', {
         method: 'POST',
@@ -48,20 +83,22 @@ async function handleTranslateClick() {
       console.log('Parsed response json:', parsedResponse);
 
       const output = parsedResponse.translation;
-      output_translate.innerText = JSON.stringify(output, null, "  ");
+      translateOutput.innerText = JSON.stringify(output, null, "  ");
 
-      showButtonsHideSpinner();
+      hideSpinnerForTranslate();
 
     } catch (e) {
-      showButtonsHideSpinner();
+      hideSpinnerForTranslate();
+      translateErrorMsg.style.display = 'block';
 
-       console.error(e);
+      console.error(e);
     }
 }
 // translate.addEventListener("click", handleTranslateClick);
 
 async function handleRawParseClick() {
-    hideButtonsShowSpinner();
+    translateErrorMsg.style.display = 'none';
+    showSpinnerForTranslate();
 
     const response = await fetch('raw-parse', {
         method: 'POST',
@@ -77,20 +114,22 @@ async function handleRawParseClick() {
       console.log('Parsed response json:', parsedResponse);
 
       const output = parsedResponse.translation;
-      output_translate.innerText = JSON.stringify(output, null, "  ");
+      translateOutput.innerText = JSON.stringify(output, null, "  ");
 
-      showButtonsHideSpinner();
+      hideSpinnerForTranslate();
 
     } catch (e) {
-      showButtonsHideSpinner();
+      hideSpinnerForTranslate();
+      translateErrorMsg.style.display = 'block';
 
       console.error(e);
     }
 }
-raw_parse_button.addEventListener("click", handleRawParseClick);
+rawParseButton.addEventListener("click", handleRawParseClick);
 
 async function handleSaveClick() {
-  hideButtonsShowSpinner();
+  saveErrorMsg.style.display = 'none';
+  showSpinnerForSave();
 
   const dataToPost = document.querySelector("#output-translate").innerText.trim();
 
@@ -109,14 +148,14 @@ async function handleSaveClick() {
     const parsedResponse = await response.json();
     console.log('Parsed response json:', parsedResponse);
 
-    showButtonsHideSpinner();
+    hideSpinnerForSave();
   } catch (e) {
     console.error(e);
+    saveErrorMsg.style.display = 'block';
 
-    showButtonsHideSpinner();
+    hideSpinnerForSave();
   }
 }
-const saveToNeoBtn = document.querySelector("#btn-save-to-neo");
 saveToNeoBtn.addEventListener("click", handleSaveClick);
 
 
@@ -150,8 +189,8 @@ function calcInputWordCount() {
 document.addEventListener('DOMContentLoaded', function() {
   calcInputTextLength();
   calcInputWordCount();
-  input_translate.addEventListener('change', calcInputTextLength);
-  input_translate.addEventListener('change', calcInputWordCount);
+  translateInput.addEventListener('change', calcInputTextLength);
+  translateInput.addEventListener('change', calcInputWordCount);
 });
 
 
