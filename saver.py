@@ -5,12 +5,14 @@ from neo4j import GraphDatabase
 
 def snake_case(s):
   # Replace illegal chars with _
-  s = s.replace('/', '_').replace('-', '_')
+  s = s.replace('/', '_')
+  # Replace . and - with a space
+  s = s.replace('-', ' ').replace('.', ' ')
   # Do rest of snake case transformation (NamedThing to named_thing, etc)
   return '_'.join(
     sub('([A-Z][a-z]+)', r' \1',
     sub('([A-Z]+)', r' \1',
-    s.replace('[-\.]', ' '))).split()).lower()
+    s)).split()).lower()
 
 # Function to create an object in the database if it doesn't exist
 def create_object_if_not_exists(driver, name):
