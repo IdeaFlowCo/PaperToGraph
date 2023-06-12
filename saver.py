@@ -48,7 +48,7 @@ def create_relationship_if_not_exists(driver, obj1_name, relationship_name, obj2
 
 def save_json_array(json_arr_str):
     # Create a Neo4j driver instance
-    driver = GraphDatabase.driver("bolt://3.238.108.174:7687", auth=("neo4j", "visions-substitutes-attackers"))
+    driver = GraphDatabase.driver("neo4j+s://20d077bf.databases.neo4j.io", auth=("neo4j", "VNfVHsSRzfTZlRRDTDluxFvi6PfLtwkO_5JTxJCV3Mc"))
 
     try:
         parsed_arr = json.loads(json_arr_str)
