@@ -5,7 +5,7 @@ from neo4j import GraphDatabase
 
 def snake_case(s):
   # Replace illegal chars with _
-  s = s.replace('/', '_')
+  s = s.replace('/', '_').replace('-', '_')
   # Do rest of snake case transformation (NamedThing to named_thing, etc)
   return '_'.join(
     sub('([A-Z][a-z]+)', r' \1',
