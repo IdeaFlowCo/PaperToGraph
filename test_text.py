@@ -1,4 +1,21 @@
-import parser
+import text
+
+
+
+def test_split_to_size(input):
+    print('*************')
+    print('Splitter info')
+    print('*************')
+    print()
+    print(f'Testing text splitting with hardcoded sample input with length: {len(input)}')
+    print(f'is_text_oversized result: {text.is_text_oversized(input)}')
+    split_input = text.split_to_size(input)
+    print(f'Sample input split into {len(split_input)} different chunks.')
+    print('Length of each chunk:')
+    for chunk in split_input:
+        print(len(chunk))
+
+
 
 SAMPLE_LONG_INPUT = """
 Abstract
@@ -33,29 +50,5 @@ WT is one of the few childhood cancers that is more common (~10%) in girls than 
 """
 
 
-print('*************')
-print('Splitter info')
-print('*************')
-print()
-print(f'Testing text splitting with hardcoded sample input with length: #{len(SAMPLE_LONG_INPUT)}')
-split_input = parser.__split_to_size(SAMPLE_LONG_INPUT)
-print(f'Sample input split into #{len(split_input)} different chunks.')
-print('Length of each chunk:')
-for chunk in split_input:
-    print(len(chunk))
-
-print('\n\n\n')
-
-print('***************')
-print('GPT prompt info')
-print('***************')
-print()
-print('Parse prompt as will be sent in system message:')
-print('\n-----')
-print(parser.PARSE_SYSTEM_MESSAGE_CONTENT)
-print('-----')
-print()
-print('Merge prompt as will be sent in system message:')
-print('\n-----')
-print(parser.MERGE_SYSTEM_MESSAGE_CONTENT)
-print('-----')
+if __name__ == '__main__':
+    test_split_to_size(SAMPLE_LONG_INPUT)

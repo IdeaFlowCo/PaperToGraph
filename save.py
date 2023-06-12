@@ -1,18 +1,24 @@
+'''
+Functions for saving parsed data to Neo4j.
+'''
+
 import json
 from re import sub
 
 from neo4j import GraphDatabase
 
-def snake_case(s):
+
+def sanitize_relationship_name(relationship):
   # Replace illegal chars with _
-  s = s.replace('/', '_')
-  # Replace . and - with a space
-  s = s.replace('-', ' ').replace('.', ' ')
-  # Do rest of snake case transformation (NamedThing to named_thing, etc)
+  relationship = relationship.replace('/', '_').replace('.', '_').replace('%', '_')
+  # Replace - with a space
+  relationship = relationship.replace('-', ' ')
+  # Transform remainder to snake case (NamedThing or 'Named Thing' to named_thing, etc)
   return '_'.join(
     sub('([A-Z][a-z]+)', r' \1',
     sub('([A-Z]+)', r' \1',
-    s)).split()).lower()
+    relationship)).split()).lower()
+
 
 # Function to create an object in the database if it doesn't exist
 def create_object_if_not_exists(driver, name):
@@ -67,7 +73,7 @@ def save_json_array(json_arr_str):
                         # If that's not the case, just skip for now.
                         continue
                     create_object_if_not_exists(driver, target)
-                    relationship_name = snake_case(relationship_name)
+                    relationship_name = sanitize_relationship_name(relationship_name)
                     create_relationship_if_not_exists(driver, name, relationship_name, target)
     finally:
         # Close the Neo4j driver
