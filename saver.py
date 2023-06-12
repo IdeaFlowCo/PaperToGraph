@@ -4,6 +4,9 @@ from re import sub
 from neo4j import GraphDatabase
 
 def snake_case(s):
+  # Replace illegal chars with _
+  s = s.replace('/', '_')
+  # Do rest of snake case transformation (NamedThing to named_thing, etc)
   return '_'.join(
     sub('([A-Z][a-z]+)', r' \1',
     sub('([A-Z]+)', r' \1',
