@@ -44,57 +44,6 @@ function hideSpinnerForTranslate() {
   saveToNeoBtn.disabled = false;
 }
 
-function showSpinnerForSave() {
-  // Hide save button
-  // translate.style.display = 'none';
-  saveToNeoBtn.style.display = 'none';
-  // Show spinner
-  saveSpinner.style.display = 'block';
-  // Disable translate buttons
-  // translate.disabled = true;
-  rawParseButton.disabled = true;
-}
-
-function hideSpinnerForSave() {
-  // Hide spinner
-  saveSpinner.style.display = 'none';
-  // Re-enable translate buttons
-  // translate.disabled = false;
-  rawParseButton.disabled = false;
-  // Show Save to Neo4j button
-  saveToNeoBtn.style.display = 'inline-block';
-}
-
-async function handleTranslateClick() {
-    translateErrorMsg.style.display = 'none';
-    showSpinnerForTranslate();
-
-    const response = await fetch('translate', {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(buildBodyForTranslate())
-      });
-
-    try {
-      const parsedResponse = await response.json();
-      console.log('Parsed response json:', parsedResponse);
-
-      const output = parsedResponse.translation;
-      translateOutput.innerText = JSON.stringify(output, null, "  ");
-
-      hideSpinnerForTranslate();
-
-    } catch (e) {
-      hideSpinnerForTranslate();
-      translateErrorMsg.style.display = 'block';
-
-      console.error(e);
-    }
-}
-// translate.addEventListener("click", handleTranslateClick);
 
 async function handleRawParseClick() {
     translateErrorMsg.style.display = 'none';
@@ -114,7 +63,7 @@ async function handleRawParseClick() {
       console.log('Parsed response json:', parsedResponse);
 
       const output = parsedResponse.translation;
-      translateOutput.innerText = JSON.stringify(output, null, "  ");
+      translateOutput.value = JSON.stringify(output, null, 2);
 
       hideSpinnerForTranslate();
 
@@ -126,37 +75,6 @@ async function handleRawParseClick() {
     }
 }
 rawParseButton.addEventListener("click", handleRawParseClick);
-
-async function handleSaveClick() {
-  saveErrorMsg.style.display = 'none';
-  showSpinnerForSave();
-
-  const dataToPost = document.querySelector("#output-translate").innerText.trim();
-
-  const response = await fetch('save-to-neo', {
-      method: 'POST',
-      mode: 'cors',
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        'data': dataToPost
-      })
-    });
-
-  try {
-    const parsedResponse = await response.json();
-    console.log('Parsed response json:', parsedResponse);
-
-    hideSpinnerForSave();
-  } catch (e) {
-    console.error(e);
-    saveErrorMsg.style.display = 'block';
-
-    hideSpinnerForSave();
-  }
-}
-saveToNeoBtn.addEventListener("click", handleSaveClick);
 
 
 function humanByteSize(numBytes) {

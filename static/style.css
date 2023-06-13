@@ -69,6 +69,7 @@ textarea {
     border: 1px solid var(--primary-color);
     display: block;
     min-height: 10vh;
+    height: 300px;
     margin: 1rem;
     padding: 1rem;
     /* font-family: monospace; */
@@ -150,13 +151,17 @@ textarea {
     background-color: transparent;
     padding: 8px 24px;
     color: var(--primary-color);
-    ;
+
     /* display: block; */
     max-width: 140px;
-    margin: 1rem 1rem 1rem 0rem;
+    margin: 1rem 0 1rem 0;
 
     border: 1px solid var(--primary-color);
     cursor: pointer;
+}
+
+.link-primary + .link-primary {
+    margin-left: 1rem;
 }
 
 .link-primary:disabled {
@@ -310,5 +315,20 @@ textarea {
     color: #721c24;
     background-color: #f8d7da;
     border: 1px solid #cf5c6b;
+    border-radius: 0.25rem;
+}
+
+/* Success message */
+.success-msg {
+    width: fit-content;
+    position: relative;
+    padding: 0.75rem 1.25rem;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 3rem;
+
+    color: #155724;
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
     border-radius: 0.25rem;
 }

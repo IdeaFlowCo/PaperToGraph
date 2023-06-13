@@ -61,13 +61,17 @@ async def split_and_run_tasks_with_heartbeat(task_inputs, task_creator, task_lab
         task_label=task_label
     )
     results = None
+    skips = 0
     while True:
         if all_tasks.done():
             results = all_tasks.result()
             break
-        log_msg('Sending connection heartbeat')
-        yield ' '
-        await asyncio.sleep(10)
+        skips += 1
+        if skips > 3:
+            skips = 0
+            log_msg('Sending connection heartbeat')
+            yield ' '
+        await asyncio.sleep(2)
     log_msg('All parsing complete')
 
     result = []

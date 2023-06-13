@@ -6,6 +6,9 @@ import json
 from re import sub
 
 from neo4j import GraphDatabase
+from neo4j.time import DateTime
+
+from utils import log_msg
 
 
 def sanitize_relationship_name(relationship):
@@ -20,49 +23,80 @@ def sanitize_relationship_name(relationship):
     relationship)).split()).lower()
 
 
-# Function to create an object in the database if it doesn't exist
-def create_object_if_not_exists(driver, name):
+# Function to create an entity in the database if it doesn't exist
+def create_entity_if_not_exists(driver, name, timestamp):
     with driver.session() as session:
-        result = session.run("MATCH (obj:Object {name: $name}) RETURN count(obj) AS count", name=name)
+        result = session.run("MATCH (ent:Entity {name: $name}) RETURN count(ent) AS count", name=name)
         count = result.single()["count"]
         if count == 0:
-            session.run("CREATE (:Object {name: $name})", name=name)
-            print(f"Object '{name}' created in the database.")
+            session.run(
+                # Note: have to call datetime() on created_at here to avoid getting localdatetime types by default
+                "CREATE (:Entity {name: $name, created_at: datetime($created_at)})", 
+                name=name,
+                created_at=timestamp,
+            )
+            log_msg(f"Entity '{name}' created in the database.")
         else:
-            print(f"Object '{name}' already exists in the database.")
+            log_msg(f"Entity '{name}' already exists in the database.")
 
 
-# Function to create a named relationship between two objects if it doesn't exist
-def create_relationship_if_not_exists(driver, obj1_name, relationship_name, obj2_name):
+# Function to create a named relationship between two entities if it doesn't exist
+def create_relationship_if_not_exists(driver, ent1_name, relationship_name, ent2_name, timestamp):
     with driver.session() as session:
         result = session.run(
-            "MATCH (obj1:Object {name: $obj1_name})-[r:%s]->(obj2:Object {name: $obj2_name}) RETURN count(r) AS count"
+            "MATCH (ent1:Entity {name: $ent1_name})-[r:%s]->(ent2:Entity {name: $ent2_name}) RETURN count(r) AS count"
             % (relationship_name),
-            obj1_name=obj1_name,
-            obj2_name=obj2_name,
+            ent1_name=ent1_name,
+            ent2_name=ent2_name,
         )
         count = result.single()["count"]
         if count == 0:
             session.run(
-                "MATCH (obj1:Object {name: $obj1_name}), (obj2:Object {name: $obj2_name}) "
-                "CREATE (obj1)-[:%s]->(obj2)" % (relationship_name),
-                obj1_name=obj1_name,
-                obj2_name=obj2_name,
+                "MATCH (ent1:Entity {name: $ent1_name}), (ent2:Entity {name: $ent2_name}) "
+                # Note: have to call datetime() on created_at here to avoid getting localdatetime types by default
+                "CREATE (ent1)-[r:%s {created_at: datetime($created_at)}]->(ent2)" % (relationship_name),
+                ent1_name=ent1_name,
+                ent2_name=ent2_name,
+                created_at=timestamp,
             )
-            print(f"Relationship '{relationship_name}' created between '{obj1_name}' and '{obj2_name}'.")
+            log_msg(f"Relationship '{relationship_name}' created between '{ent1_name}' and '{ent2_name}'.")
         else:
-            print(f"Relationship '{relationship_name}' already exists between '{obj1_name}' and '{obj2_name}'.")
+            log_msg(f"Relationship '{relationship_name}' already exists between '{ent1_name}' and '{ent2_name}'.")
 
 
-def save_json_array(json_arr_str):
+def __get_neo4j_driver(neo_config):
+    if not neo_config:
+        neo_config = {}
+
+    # Ignore any config values that are None or empty strings
+    neo_config = {k: v for k, v in neo_config.items() if v}
+
+    uri = neo_config.get('uri', 'neo4j+s://20d077bf.databases.neo4j.io')
+    user = neo_config.get('user', 'neo4j')
+    password = neo_config.get('password', 'VNfVHsSRzfTZlRRDTDluxFvi6PfLtwkO_5JTxJCV3Mc')
+
+    log_msg({
+        'uri': uri,
+        'user': user,
+        'password': password,
+    })
+
     # Create a Neo4j driver instance
-    driver = GraphDatabase.driver("neo4j+s://20d077bf.databases.neo4j.io", auth=("neo4j", "VNfVHsSRzfTZlRRDTDluxFvi6PfLtwkO_5JTxJCV3Mc"))
+    return GraphDatabase.driver(uri, auth=(user, password))
+
+
+def save_json_array(json_arr_str, neo_config=None):
+    # Create a Neo4j driver instance
+    driver = __get_neo4j_driver(neo_config)
+
+    # Use a single timestamp for marking creation time of all entities/relationships in this run
+    created_ts = DateTime.now()
 
     try:
         parsed_arr = json.loads(json_arr_str)
         for obj in parsed_arr:
             for name, relationships in obj.items():
-                create_object_if_not_exists(driver, name)
+                create_entity_if_not_exists(driver, name, created_ts)
                 if not isinstance(relationships, dict):
                     # We expect every top level value to be a dict of relationships for the named key.
                     # If that's not the case for some reason, just skip it for now
@@ -72,9 +106,13 @@ def save_json_array(json_arr_str):
                         # We expect all of these to be str -> str pairs.
                         # If that's not the case, just skip for now.
                         continue
-                    create_object_if_not_exists(driver, target)
+                    create_entity_if_not_exists(driver, target, created_ts)
                     relationship_name = sanitize_relationship_name(relationship_name)
-                    create_relationship_if_not_exists(driver, name, relationship_name, target)
+                    create_relationship_if_not_exists(driver, name, relationship_name, target, created_ts)
+    except json.JSONDecodeError as err:
+        log_msg('Provided input is not valid JSON.')
+        log_msg(f'Received: {json_arr_str}')
+        raise err
     finally:
         # Close the Neo4j driver
         driver.close()

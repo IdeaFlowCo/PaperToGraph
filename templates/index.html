@@ -63,19 +63,25 @@
             Error encountered while trying to extract information. Please try again in a few seconds.
         </div>
 
-        <pre style="font-family: Arial; text-align: left;"
+        <textarea style="font-family: Arial; text-align: left;"
              id="output-translate" 
             contenteditable="true" 
             placeholder="Output of the translation">
-        </pre>
+        </textarea>
 
         <div class="spinner-container">
             <button class="link link-primary" id="btn-save-to-neo">Save to Neo4j</button>
             <div id="save-loading" class="spinner" style="display: none;"></div>
         </div>
 
+        <div id="save-input-error" class="error-msg" style="display: none;">
+            The data you want to save to Neo4j is not formatted as proper JSON. Please correct before trying again.
+        </div>
         <div id="save-error" class="error-msg" style="display: none;">
             Error encountered while trying to save data. Please try again in a few seconds.
+        </div>
+        <div id="save-success" class="success-msg" style="display: none;">
+            Data saved successfully.
         </div>
 
     </div>
@@ -89,6 +95,7 @@
     crossorigin="anonymous"
     ></script>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <script src="{{ url_for('static', filename='save2neo.js') }}"></script>
 </body>
 
 </html>

@@ -1,7 +1,6 @@
 import argparse
 import asyncio
 
-# from parse import parse_with_gpt
 import parse
 
 from test_text import SAMPLE_LONG_INPUT

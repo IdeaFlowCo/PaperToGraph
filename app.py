@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import json
+import os
 
 import sentry_sdk
 
@@ -59,7 +60,6 @@ def iter_over_async(ait):
         yield obj
 
 
-
 def __create_parse_response(message:str, model:str):
     if model not in ['gpt-3.5-turbo', 'gpt-4']:
         model = 'gpt-3.5-turbo'
@@ -100,17 +100,43 @@ def save_to_neo():
     log_msg('POST request to /save-to-neo endpoint')
     __log_args(post)
     
-    if post is not None and 'data' in post:
-        save.save_json_array(post['data'])
-        return jsonify({'status': 'success'}, 200)
-    else:
+    if post is None or 'data' not in post:
         return jsonify(__wrong_payload_response(), 400)
+    
+    try:
+        save.save_json_array(post['data'], neo_config=app.config['NEO4J_CREDENTIALS'])
+        return jsonify({'status': 'success'}, 200)
+    except json.JSONDecodeError:
+        return jsonify({'status': 'error', 'message': 'data provided not valid JSON'}), 400
+
+
+def __handle_neo_credential_override(args):
+    uri_override = args.neo_uri if args.neo_uri is not None else os.environ.get('NEO_URI')
+    user_override = args.neo_user if args.neo_user is not None else os.environ.get('NEO_USER')
+    pass_override = args.neo_pass if args.neo_pass is not None else os.environ.get('NEO_PASS')
+    neo_credentials = {
+        'uri': uri_override,
+        'user': user_override,
+        'password': pass_override
+    }
+    # Ignore any override values that are None or empty strings
+    neo_credentials = {k: v for k, v in neo_credentials.items() if v}
+    log_msg(f'Neo4j credential overrides: {neo_credentials}')
+    app.config.update(NEO4J_CREDENTIALS=neo_credentials)
 
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
+
     argparser.add_argument('--local', dest='local', action='store_true')
+
+    argparser.add_argument('--neo_uri', action='store', default=None, help='Specify URI for Neo4j database')
+    argparser.add_argument('--neo_user', action='store', default=None, help='Specify username for Neo4j database')
+    argparser.add_argument('--neo_pass', action='store', default=None, help='Specify password for Neo4j database')
+
     args = argparser.parse_args()
+
+    __handle_neo_credential_override(args)
 
     log_msg('Starting server...')
     if args.local:
