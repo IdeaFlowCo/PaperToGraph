@@ -104,7 +104,7 @@ def save_to_neo():
         return jsonify(__wrong_payload_response(), 400)
     
     try:
-        save.save_json_array(post['data'], neo_config=app.config['NEO4J_CREDENTIALS'])
+        save.save_json_array(post['data'], neo_config=app.config.get('NEO4J_CREDENTIALS'))
         return jsonify({'status': 'success'}, 200)
     except json.JSONDecodeError:
         return jsonify({'status': 'error', 'message': 'data provided not valid JSON'}), 400
