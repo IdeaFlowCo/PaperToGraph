@@ -63,30 +63,49 @@ def read_file_from_s3(uri):
     '''
     Read a file from S3 and return its contents.
     '''
-    bucket, key = parse_s3_uri(uri)
+    bucket, path = parse_s3_uri(uri)
+    file_name = os.path.basename(path)
+
     s3_client = boto3.client('s3')
-    response = s3_client.get_object(Bucket=bucket, Key=key)
+    response = s3_client.get_object(Bucket=bucket, Key=path)
+    file_data = response['Body'].read().decode('utf-8')
 
-    return response['Body'].read().decode('utf-8')
+    return file_name, file_data
 
 
-def create_output_subdirectory(bucket, path):
+def create_timestamped_output_dir(output_uri):
     '''
     Create a subdirectory for output of this job at the given path and return the key for the new subdirectory.
     '''
+    bucket, path = parse_s3_uri(output_uri)
     s3_client = boto3.client('s3')
     output_path = f'{path}/{datetime.now().timestamp()}-output/'.lstrip('/')
     response = s3_client.put_object(Bucket=bucket, Key=output_path)
     if response['ResponseMetadata']['HTTPStatusCode'] == 200:
-        return output_path
+        return f's3://{bucket}/{output_path}'
     else:
         raise Exception(f'Error creating output subdirectory at {output_path}', response)
 
 
-def write_file_to_s3(bucket, key, data):
+def create_output_dir_for_file(output_uri, file_name):
+    '''
+    Create a subdirectory for output of a specific file and return the key for the new subdirectory.
+    '''
+    bucket, output_path = parse_s3_uri(output_uri)
+    s3_client = boto3.client('s3')
+    output_path = f'{output_path.strip("/")}/{file_name.strip("/")}/'
+    response = s3_client.put_object(Bucket=bucket, Key=output_path)
+    if response['ResponseMetadata']['HTTPStatusCode'] == 200:
+        return f's3://{bucket}/{output_path}'
+    else:
+        raise Exception(f'Error creating output subdirectory at {output_path}', response)
+
+
+def write_file_to_s3(output_uri, data):
     '''
     Write a file to S3.
     '''
+    bucket, key = parse_s3_uri(output_uri)
     s3_client = boto3.client('s3')
     response = s3_client.put_object(Bucket=bucket, Key=key, Body=data)
     if response['ResponseMetadata']['HTTPStatusCode'] != 200:

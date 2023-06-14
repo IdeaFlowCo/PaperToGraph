@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import json
 
 import aws
 import save
@@ -9,46 +8,36 @@ from utils import log_msg
 
 
 
-TEST_INPUT = '''
-[
-  {
-    "Trifluoperazine": {
-      "may treat": "Wilms' Tumor",
-      "antagonizes": "CALM1"
-    },
-    "CALM1": {
-      "regulated by": "Trifluoperazine",
-      "regulates": "IL-6"
-    },
-    "IL-6": {
-      "associated with": "Wilms' Tumor",
-      "regulated by": "CALM1"
-    }
-  }
-]
-'''
-
-
-async def __load_input(data_source):
+async def __find_input_files(data_source):
     files = aws.get_objects_at_s3_uri(data_source)
     if not files:
-      log_msg(f'No files found at {data_source}')
-      log_msg('Using hard-coded test input instead')
-      return TEST_INPUT
+      raise Exception(f'No files found at {data_source}')
 
     log_msg(f'Found {len(files)} files to process')
     log_msg(files)
-    log_msg(f'Loading first file: {files[0]}')
-    data = aws.read_file_from_s3(files[0])
+    return files
+
+
+async def __fetch_input_file(file_uri):
+    log_msg(f'Fetching file {file_uri}')
+    file_name, data = aws.read_file_from_s3(file_uri)
     log_msg(f'Loaded {len(data)} bytes')
-    log_msg(data)
-    return data
+    return file_name, data
+
+
+async def __process_file(file_uri, neo_config):
+    log_msg(f'Processing file {file_uri}')
+
+    input_file_name, input_data = await __fetch_input_file(file_uri)
+
+    log_msg(f'Saving data from {input_file_name} to Neo4j')
+    save.save_json_data(input_data, neo_config=neo_config)
     
 
-
 async def save_to_neo4j(data_source, neo_config):
-    data = await __load_input(data_source)
-    save.save_json_data(data, neo_config=neo_config)
+    input_files = await __find_input_files(data_source)
+    for file_uri in input_files:
+        await __process_file(file_uri, neo_config)
 
 
 if __name__ == "__main__":
