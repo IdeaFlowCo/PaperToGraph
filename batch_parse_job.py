@@ -5,8 +5,6 @@ import aws
 import parse
 from utils import log_msg
 
-from test_text import SAMPLE_LONG_INPUT
-
 
 GPT_MODEL = 'gpt-3.5-turbo'
 
