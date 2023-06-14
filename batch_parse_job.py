@@ -3,10 +3,11 @@ import asyncio
 
 import aws
 import parse
+import utils
 from utils import log_msg
 
 
-GPT_MODEL = 'gpt-3.5-turbo'
+DEFAULT_GPT_MODEL = 'gpt-3.5-turbo'
 
 
 async def __find_input_files(data_source):
@@ -26,7 +27,7 @@ async def __fetch_input_file(file_uri):
     return file_name, data
 
 
-async def __process_file(file_uri, job_output_uri, dry_run=False):
+async def __process_file(file_uri, job_output_uri, gpt_model, dry_run=False):
     log_msg(f'Processing file {file_uri}')
 
     input_file_name, input_data = await __fetch_input_file(file_uri)
@@ -35,7 +36,7 @@ async def __process_file(file_uri, job_output_uri, dry_run=False):
 
     log_msg(f'Beginning parse of file: {input_file_name}')
     output_num = 0
-    async for parse_result in parse.parse_with_gpt_multitask(input_data, model=GPT_MODEL):
+    async for parse_result in parse.parse_with_gpt_multitask(input_data, model=gpt_model):
         # Create a task for each output chunk so that we can write them in parallel
         asyncio.create_task(
             __write_output_for_file(
@@ -58,11 +59,11 @@ async def __write_output_for_file(data, file_output_uri, output_num, dry_run=Fal
     aws.write_file_to_s3(output_chunk_uri, data)
 
 
-async def parse_with_gpt(data_source, output_uri, dry_run=False):
+async def parse_with_gpt(data_source, output_uri, gpt_model, dry_run=False):
     input_files = await __find_input_files(data_source)
     job_output_uri = aws.create_timestamped_output_dir(output_uri, dry_run=dry_run)
     for input_file in input_files:
-       await __process_file(input_file, job_output_uri, dry_run=dry_run)
+       await __process_file(input_file, job_output_uri, gpt_model, dry_run=dry_run)
 
 
 if __name__ == "__main__":
@@ -78,6 +79,11 @@ if __name__ == "__main__":
         help="The URI where output is saved, like an S3 bucket location."
     )
     parser.add_argument(
+        '--gpt_model',
+        default=DEFAULT_GPT_MODEL,
+        help="The GPT model to use when parsing."
+    )
+    parser.add_argument(
         '--dry_run',
         action="store_true",
         default=False, 
@@ -85,6 +91,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    gpt_model = utils.sanitize_gpt_model_choice(args.gpt_model)
+    log_msg(f'Using GPT model "{gpt_model}"')
+
     asyncio.run(
-        parse_with_gpt(args.data_source, args.output_uri, dry_run=args.dry_run)
+        parse_with_gpt(args.data_source, args.output_uri, args.gpt_model, dry_run=args.dry_run)
     )

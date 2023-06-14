@@ -34,6 +34,12 @@ def neo_config_from_args_or_env(args):
     return neo_credentials
 
 
+def sanitize_gpt_model_choice(model):
+    if model not in ['gpt-3.5-turbo', 'gpt-4']:
+        model = 'gpt-3.5-turbo'
+    return model
+
+
 def clean_json(response):
     cleaned = {}
     try:

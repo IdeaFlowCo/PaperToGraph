@@ -62,9 +62,7 @@ def iter_over_async(ait):
 
 
 def __create_parse_response(message:str, model:str):
-    if model not in ['gpt-3.5-turbo', 'gpt-4']:
-        model = 'gpt-3.5-turbo'
-    
+    model = utils.sanitize_gpt_model_choice(model)
     iter = iter_over_async(parse.async_parse_with_heartbeat(message, model=model))
     return app.response_class(iter, mimetype='application/json')
 
