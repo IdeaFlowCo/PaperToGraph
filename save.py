@@ -87,7 +87,27 @@ def __get_neo4j_driver(neo_config):
     return GraphDatabase.driver(uri, auth=(user, password))
 
 
-def save_json_array(json_arr_str, neo_config=None):
+def save_dict_of_entities(neo_driver, data, created_ts=None):
+    if not created_ts:
+        created_ts = DateTime.now()
+
+    for name, relationships in data.items():
+        create_entity_if_not_exists(neo_driver, name, created_ts)
+        if not isinstance(relationships, dict):
+            # We expect every top level value to be a dict of relationships for the named key.
+            # If that's not the case for some reason, just skip it for now
+            continue
+        for relationship_name, target in relationships.items():
+            if not isinstance(relationship_name, str) or not isinstance(target, str):
+                # We expect all of these to be str -> str pairs.
+                # If that's not the case, just skip for now.
+                continue
+            create_entity_if_not_exists(neo_driver, target, created_ts)
+            relationship_name = sanitize_relationship_name(relationship_name)
+            create_relationship_if_not_exists(neo_driver, name, relationship_name, target, created_ts)
+
+
+def save_json_data(json_str, neo_config=None):
     # Create a Neo4j driver instance
     driver = __get_neo4j_driver(neo_config)
 
@@ -95,26 +115,21 @@ def save_json_array(json_arr_str, neo_config=None):
     created_ts = DateTime.now()
 
     try:
-        parsed_arr = json.loads(json_arr_str)
-        for obj in parsed_arr:
-            for name, relationships in obj.items():
-                create_entity_if_not_exists(driver, name, created_ts)
-                if not isinstance(relationships, dict):
-                    # We expect every top level value to be a dict of relationships for the named key.
-                    # If that's not the case for some reason, just skip it for now
-                    continue
-                for relationship_name, target in relationships.items():
-                    if not isinstance(relationship_name, str) or not isinstance(target, str):
-                        # We expect all of these to be str -> str pairs.
-                        # If that's not the case, just skip for now.
-                        continue
-                    create_entity_if_not_exists(driver, target, created_ts)
-                    relationship_name = sanitize_relationship_name(relationship_name)
-                    create_relationship_if_not_exists(driver, name, relationship_name, target, created_ts)
+        parsed = json.loads(json_str)
+        if isinstance(parsed, dict):
+            save_dict_of_entities(driver, parsed, created_ts=created_ts)
+        elif isinstance(parsed, list):
+            for obj in parsed:
+                save_dict_of_entities(driver, obj, created_ts=created_ts)
+        else:
+            log_msg('Unexpected input type. Expected JSON object or array.')
+            log_msg(f'Received: {json_str}')
+            log_msg(f'Parsed as: {parsed}')
+            raise Exception(f'Unexpected input: {json_str}', f'Parsed as: {parsed}')
     except json.JSONDecodeError as err:
         log_msg('Provided input is not valid JSON.')
-        log_msg(f'Received: {json_arr_str}')
+        log_msg(f'Received: {json_str}')
         raise err
     finally:
-        # Close the Neo4j driver
         driver.close()
+    

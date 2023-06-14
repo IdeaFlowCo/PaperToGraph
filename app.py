@@ -10,6 +10,7 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 
 import parse
 import save
+import utils
 from utils import log_msg
 
 
@@ -104,21 +105,14 @@ def save_to_neo():
         return jsonify(__wrong_payload_response(), 400)
     
     try:
-        save.save_json_array(post['data'], neo_config=app.config.get('NEO4J_CREDENTIALS'))
+        save.save_json_data(post['data'], neo_config=app.config.get('NEO4J_CREDENTIALS'))
         return jsonify({'status': 'success'}, 200)
     except json.JSONDecodeError:
         return jsonify({'status': 'error', 'message': 'data provided not valid JSON'}), 400
 
 
 def __handle_neo_credential_override(args):
-    uri_override = args.neo_uri if args.neo_uri is not None else os.environ.get('NEO_URI')
-    user_override = args.neo_user if args.neo_user is not None else os.environ.get('NEO_USER')
-    pass_override = args.neo_pass if args.neo_pass is not None else os.environ.get('NEO_PASS')
-    neo_credentials = {
-        'uri': uri_override,
-        'user': user_override,
-        'password': pass_override
-    }
+    neo_credentials = utils.neo_config_from_args_or_env(args)
     # Ignore any override values that are None or empty strings
     neo_credentials = {k: v for k, v in neo_credentials.items() if v}
     log_msg(f'Neo4j credential overrides: {neo_credentials}')
@@ -130,9 +124,7 @@ if __name__ == '__main__':
 
     argparser.add_argument('--local', dest='local', action='store_true')
 
-    argparser.add_argument('--neo_uri', action='store', default=None, help='Specify URI for Neo4j database')
-    argparser.add_argument('--neo_user', action='store', default=None, help='Specify username for Neo4j database')
-    argparser.add_argument('--neo_pass', action='store', default=None, help='Specify password for Neo4j database')
+    utils.add_neo_credential_override_args(argparser)
 
     args = argparser.parse_args()
 
