@@ -9,7 +9,7 @@ from text import is_text_oversized, split_to_size
 
 
 def get_text_size_limit(model):
-    return 10000 if model == 'gpt-4' else 8000
+    return 12000 if model == 'gpt-4' else 8000
 
 
 async def parse_with_gpt(text: str, model="gpt-3.5-turbo"):
@@ -21,13 +21,12 @@ async def parse_with_gpt(text: str, model="gpt-3.5-turbo"):
     # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
     # this is hopefully acceptable behavior.
     # The benefit is that the total parsing is much more resilient with some fault tolerance.
-    max_tokens = 2000 if model == 'gpt-4' else 1600
-    parse_task_creator = lambda chunk: gpt.async_fetch_parse(chunk, model=model, max_tokens=max_tokens, skip_on_error=True)
+    parse_work_fn = lambda chunk: gpt.async_fetch_parse(chunk, model=model, skip_on_error=True)
     
     master_parse_task = tasks.create_task_of_tasks(
         task_inputs=text_chunks, 
-        task_creator=parse_task_creator, 
-        task_label='parsing'
+        work_fn=parse_work_fn, 
+        task_label='Parse'
     )
     return await master_parse_task
 
@@ -41,13 +40,12 @@ async def parse_with_gpt_multitask(text: str, model="gpt-3.5-turbo"):
     # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
     # this is hopefully acceptable behavior.
     # The benefit is that the total parsing is much more resilient with some fault tolerance.
-    max_tokens = 2000 if model == 'gpt-4' else 1600
-    parse_task_creator = lambda chunk: gpt.async_fetch_parse(chunk, model=model, max_tokens=max_tokens, skip_on_error=True)
+    parse_work_fn = lambda chunk: gpt.async_fetch_parse(chunk, model=model, skip_on_error=True)
 
     async for result in tasks.create_and_run_tasks(
         task_inputs=text_chunks, 
-        task_creator=parse_task_creator, 
-        task_label='parsing'
+        work_fn=parse_work_fn, 
+        task_label='Parse'
     ):
         yield result
 
@@ -58,17 +56,16 @@ async def async_parse_with_heartbeat(text: str, model="gpt-3.5-turbo"):
     '''
     log_msg('Sending connection heartbeat')
     yield ' '
-    text_limit = 10000 if model == 'gpt-4' else 8000
+    text_limit = get_text_size_limit(model)
     text_chunks = split_to_size(text, limit=text_limit)
     # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
     # this is hopefully acceptable behavior.
     # The benefit is that the total parsing is much more resilient with some fault tolerance.
-    max_tokens = 2000 if model == 'gpt-4' else 1600
-    parse_task_creator = lambda chunk: gpt.async_fetch_parse(chunk, model=model, max_tokens=max_tokens, skip_on_error=True)
+    parse_work_fn = lambda chunk: gpt.async_fetch_parse(chunk, model=model, skip_on_error=True)
     async for chunk in tasks.split_and_run_tasks_with_heartbeat(
         task_inputs=text_chunks, 
-        task_creator=parse_task_creator, 
-        task_label='parsing'
+        work_fn=parse_work_fn, 
+        task_label='Parse'
     ):
         yield chunk
 

@@ -15,16 +15,30 @@ from utils import log_msg
 from gpt.common import async_fetch_from_openai
 
 
+PARSE_SM_TEMPLATE = (
+    "Each user message will be input text to process. "
+    "Extract the named entities and their relationships from the text provided. "
+    "The output should be formatted as a JSON object. Each key in the output object should be the name of an extracted entity. "
+    "Each value should be an object with a key for each relationship and values representing the target of the relationship. "
+    "\n\n"
+    "For example, if provided the following input:"
+    "\n```\n"
+    "{sample_input}"
+    "\n```\n"
+    "An acceptable output would be:"
+    "\n```\n"
+    "{sample_output}"
+    "`\n```\n"
+    "\n"
+    "If no entities or relationships can be extracted from the text provided, respond with {none_found}. "
+    "Responses should consist only of the extracted data in JSON format, or the string {none_found}."
+)
+
 SAMPLE_PARSE_INPUT = (
     "Tom Currier is a great guy who built lots of communities after he studied at Stanford and Harvard. "
     "He also won the Thiel fellowship. "
 )
-
 SAMPLE_PARSE_OUTPUT = (
-    # "Tom Currier"
-    # "\n- studied at: Stanford, Harvard"
-    # "\n- winner of: Thiel Fellowship"
-    # "\n\n"
     "{"
     "\n  \"Tom Currier\": {"
     "\n    \"studied at\": \"Stanford, Harvard\","
@@ -32,46 +46,37 @@ SAMPLE_PARSE_OUTPUT = (
     "\n  }"
     "\n}"
 )
+NO_ENTITIES_MARKER = 'NO_ENTITIES_FOUND'
 
-PARSE_SYSTEM_MESSAGE_CONTENT = (
-    "Extract the named entities and relations between them in subsequent queries as per the following format. "
-    "Specifically list the named entities as JSON objects, with properties for each of their relationships. "
-    "Ignore any named entities that do not have specified relationships to other entities. "
-    "Don't forget newlines between entries and make sure that response is valid JSON."
-    # "Make sure to merge the information about extracted entities with any previously extracted information. "
-    "\n\n"
-    "Input: \n" + SAMPLE_PARSE_INPUT + "\n\n"
-    "Output: \n" + SAMPLE_PARSE_OUTPUT + "\n\n"
-    # "Also, do a second degree of entity extraction on all the entities named as targets, connecting, for instance"
-    # "\n\"constitutive Wnt signalling\""
-    # "\n- Wnt"
-    # "\n"
-    # "\n\"part of the β-catenin degradation complex\""
-    # "\n- β-catenin"
-)
-PARSE_SYSTEM_MESSAGE = {"role": "system", "content": PARSE_SYSTEM_MESSAGE_CONTENT}
+
+PARSE_SYSTEM_MESSAGE = {
+    "role": "system", 
+    "content": PARSE_SM_TEMPLATE.format(
+        sample_input=SAMPLE_PARSE_INPUT, sample_output=SAMPLE_PARSE_OUTPUT, none_found=NO_ENTITIES_MARKER)
+    }
 
 
 
-async def async_fetch_parse(text:str, model="gpt-3.5-turbo", max_tokens=1500, skip_on_error=False, should_retry=True):
+async def async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False):
     '''
     Retrieve parse response from GPT for given block of text.
     '''
-    messages = [
-        PARSE_SYSTEM_MESSAGE
-    ]
+    max_tokens = 2000 if model == 'gpt-4' else 1600
+    timeout = 90 if model == 'gpt-4' else 60
 
-    messages.append(
+    messages = [
+        PARSE_SYSTEM_MESSAGE,
         {"role": "user", "content": text}
-    )
+    ]
 
     return await async_fetch_from_openai(
         messages,
         log_label='Parse',
         model=model,
         max_tokens=max_tokens,
-        skip_on_error=skip_on_error, 
-        should_retry=should_retry
+        timeout=timeout,
+        skip_on_error=skip_on_error,
+        skip_msg=NO_ENTITIES_MARKER
     )
 
 

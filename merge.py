@@ -30,11 +30,11 @@ async def async_merge_with_gpt(parse_results, model="gpt-3.5-turbo"):
     grouped_parse_results = __group_parse_results(parse_results)
     # Merge groups of parse results cumulatively until we're ready for a final merge
     while len(grouped_parse_results) > 1:
-        merge_task_creator = lambda merge_group: gpt.async_fetch_merge(merge_group, model=model, skip_on_error=True)
+        merge_work_fn = lambda merge_group: gpt.async_fetch_merge(merge_group, model=model, skip_on_error=True)
         all_merging = create_task_of_tasks(
             task_inputs=grouped_parse_results, 
-            task_creator=merge_task_creator, 
-            task_label='merge'
+            work_fn=merge_work_fn, 
+            task_label='Merge'
         )
         merge_results = []
         while True:

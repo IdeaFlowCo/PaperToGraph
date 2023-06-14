@@ -53,7 +53,6 @@ async def __write_output_for_file(data, file_output_uri, output_num, dry_run=Fal
 
     if dry_run:
         log_msg(f'Would have written {len(data)} bytes')
-        log_msg(data)
         return
 
     aws.write_file_to_s3(output_chunk_uri, data)
