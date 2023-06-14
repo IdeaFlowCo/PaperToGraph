@@ -22,7 +22,6 @@ def split_to_size(text:str, limit=TEXT_BLOCK_SIZE_LIMIT):
 
     # Split by paragraphs first
     paragraph_chunks = list(filter(lambda x : x != '', text.split('\n\n')))
-    log_msg(f'Split into {len(paragraph_chunks)} paragraphs')
 
     # Any paragraph that is too long, split by sentences
     text_chunks = []

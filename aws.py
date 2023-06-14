@@ -7,6 +7,8 @@ from urllib.parse import urlparse
 
 import boto3
 
+from utils import log_msg
+
 
 def check_for_aws_env_vars():
     '''
@@ -73,28 +75,42 @@ def read_file_from_s3(uri):
     return file_name, file_data
 
 
-def create_timestamped_output_dir(output_uri):
+def create_timestamped_output_dir(output_uri, dry_run=False):
     '''
     Create a subdirectory for output of this job at the given path and return the key for the new subdirectory.
     '''
     bucket, path = parse_s3_uri(output_uri)
+    output_path = f'{path}/{datetime.now().timestamp()}-output/'.lstrip('/') # If path is empty, trim leading slash
+
+    if dry_run:
+        log_msg(f'Would have created a subdirectory for job output at s3://{bucket}/{output_path}')
+        return f's3://{bucket}/{output_path}'
+
+    log_msg(f'Creating a subdirectory for job output at s3://{bucket}/{output_path}')
     s3_client = boto3.client('s3')
-    output_path = f'{path}/{datetime.now().timestamp()}-output/'.lstrip('/')
     response = s3_client.put_object(Bucket=bucket, Key=output_path)
+
     if response['ResponseMetadata']['HTTPStatusCode'] == 200:
         return f's3://{bucket}/{output_path}'
     else:
         raise Exception(f'Error creating output subdirectory at {output_path}', response)
 
 
-def create_output_dir_for_file(output_uri, file_name):
+def create_output_dir_for_file(output_uri, file_name, dry_run=False):
     '''
     Create a subdirectory for output of a specific file and return the key for the new subdirectory.
     '''
     bucket, output_path = parse_s3_uri(output_uri)
-    s3_client = boto3.client('s3')
     output_path = f'{output_path.strip("/")}/{file_name.strip("/")}/'
+
+    if dry_run:
+        log_msg(f'Would have created a subdirectory for parse output of {file_name} at s3://{bucket}/{output_path}')
+        return f's3://{bucket}/{output_path}'
+    
+    log_msg(f'Creating a subdirectory for parse output of {file_name} at s3://{bucket}/{output_path}')
+    s3_client = boto3.client('s3')
     response = s3_client.put_object(Bucket=bucket, Key=output_path)
+
     if response['ResponseMetadata']['HTTPStatusCode'] == 200:
         return f's3://{bucket}/{output_path}'
     else:

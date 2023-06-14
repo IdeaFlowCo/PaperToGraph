@@ -18,41 +18,56 @@ async def create_and_run_tasks(task_inputs, task_creator, task_label):
     '''
     tasks = []
     tasks_created = 0
-    tasks_to_create = len(task_inputs)
+    tasks_completed = 0
+    total_tasks = len(task_inputs)
     # Make a maximum of 8 tasks at a time to avoid OpenAI rate limit
-    for i in range(min(tasks_to_create, MAX_API_TASKS)):
+    for i in range(min(total_tasks, MAX_API_TASKS)):
         input = task_inputs[i]
-        tasks.append(asyncio.create_task(task_creator(input)))
+        new_task = asyncio.create_task(task_creator(input))
+        tasks.append(new_task)
         tasks_created += 1
-    log_msg(f'Created {tasks_created} {task_label} tasks')
-    # Wait for all tasks to complete
-    while True:
-        tasks_done = 0
-        for task in tasks:
-            if not task.done():
-                continue
-            tasks_done += 1
-        tasks_in_progress = tasks_created - tasks_done
-        # Check if we were capped by MAX_API_TASKS and some tasks finished; if so, replace them
-        if tasks_created < tasks_to_create and tasks_in_progress < MAX_API_TASKS:
-            new_tasks = []
-            new_tasks_to_create = min(tasks_to_create - tasks_created, MAX_API_TASKS - tasks_in_progress)
-            for i in range(new_tasks_to_create):
-                input = task_inputs[tasks_created]
-                new_tasks.append(asyncio.create_task(task_creator(input)))
-                tasks_created += 1
-            tasks.extend(new_tasks)
-        log_msg(f'{tasks_done} out of {tasks_created} {task_label} tasks completed')
-        if tasks_done == tasks_created:
-            return [task.result() for task in tasks]
-        await asyncio.sleep(5)
+
+    log_msg(f'{task_label}: {tasks_completed} of {total_tasks} tasks completed ({len(tasks)} currently running)')
+    
+    while tasks_completed < len(task_inputs):
+        # Wait for any of the running tasks to complete
+        completed, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+
+        # Process the completed tasks and collect results
+        for task in completed:
+            result = await task
+            tasks_completed += 1
+            yield result
+            tasks.remove(task)
+
+        # Start new tasks up to the maximum allowed concurrent tasks
+        while len(tasks) < MAX_API_TASKS and tasks_created < total_tasks:
+            input = task_inputs[tasks_created]
+            task = asyncio.create_task(task_creator(input))
+            tasks.append(task)
+            tasks_created += 1
+
+        log_msg(f'{task_label}: {tasks_completed} of {total_tasks} tasks completed ({len(tasks)} currently running)')
 
 
 def create_task_of_tasks(task_inputs, task_creator, task_label):
-    return asyncio.create_task(create_and_run_tasks(task_inputs, task_creator, task_label))
+    '''
+    Create subtasks for each input in task_inputs and return a task that will complete when all subtasks are complete.
+    '''
+    async def gather_results():
+        results = []
+        async for task_result in create_and_run_tasks(task_inputs, task_creator, task_label):
+            results.append(task_result)
+        return results
+
+    return asyncio.create_task(gather_results())
+
 
 
 async def split_and_run_tasks_with_heartbeat(task_inputs, task_creator, task_label):
+    '''
+    Create separate tasks for each input and await completion while yielding occasional heartbeat messages.
+    '''
     log_msg('Sending connection heartbeat')
     yield ' '
     all_tasks = create_task_of_tasks(

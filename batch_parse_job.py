@@ -26,35 +26,43 @@ async def __fetch_input_file(file_uri):
     return file_name, data
 
 
-async def __process_file(file_uri, job_output_uri):
+async def __process_file(file_uri, job_output_uri, dry_run=False):
     log_msg(f'Processing file {file_uri}')
 
     input_file_name, input_data = await __fetch_input_file(file_uri)
 
-    file_output_uri = aws.create_output_dir_for_file(job_output_uri, input_file_name)
-    log_msg(f'Created a subdirectory for parse output of {input_file_name} at {file_output_uri}')
+    file_output_uri = aws.create_output_dir_for_file(job_output_uri, input_file_name, dry_run=dry_run)
 
     log_msg(f'Beginning parse of file: {input_file_name}')
-    parsed_data = await parse.parse_with_gpt(input_data, model=GPT_MODEL)
-
-    await __write_output_for_file(parsed_data, file_output_uri)
-
-
-async def __write_output_for_file(data, file_output_uri):
-    if not isinstance(data, list):
-        raise Exception(f'Unexpected data type for file output. Expected list, got {type(data)}')
-
-    for i, datum in enumerate(data):
-        output_chunk_uri = f'{file_output_uri.rstrip("/")}/output_{i}.json'
-        log_msg(f'Writing output chunk {i} of {len(data)} to {output_chunk_uri}')
-        aws.write_file_to_s3(output_chunk_uri, datum)
+    output_num = 0
+    async for parse_result in parse.parse_with_gpt_multitask(input_data, model=GPT_MODEL):
+        # Create a task for each output chunk so that we can write them in parallel
+        asyncio.create_task(
+            __write_output_for_file(
+                parse_result, 
+                file_output_uri,
+                output_num,
+                dry_run=dry_run))
+        output_num += 1
 
 
-async def parse_with_gpt(data_source, output_uri):
+async def __write_output_for_file(data, file_output_uri, output_num, dry_run=False):
+    output_chunk_uri = f'{file_output_uri.rstrip("/")}/output_{output_num}.json'
+    log_msg(f'Writing output chunk {output_num} to {output_chunk_uri}')
+
+    if dry_run:
+        log_msg(f'Would have written {len(data)} bytes')
+        log_msg(data)
+        return
+
+    aws.write_file_to_s3(output_chunk_uri, data)
+
+
+async def parse_with_gpt(data_source, output_uri, dry_run=False):
     input_files = await __find_input_files(data_source)
-    job_output_uri = aws.create_timestamped_output_dir(output_uri)
+    job_output_uri = aws.create_timestamped_output_dir(output_uri, dry_run=dry_run)
     for input_file in input_files:
-       await __process_file(input_file, job_output_uri)
+       await __process_file(input_file, job_output_uri, dry_run=dry_run)
 
 
 if __name__ == "__main__":
@@ -69,8 +77,14 @@ if __name__ == "__main__":
         default='s3://paper2graph-parse-results',
         help="The URI where output is saved, like an S3 bucket location."
     )
+    parser.add_argument(
+        '--dry_run',
+        action="store_true",
+        default=False, 
+        help="The URI where output is saved, like an S3 bucket location."
+    )
     args = parser.parse_args()
 
     asyncio.run(
-        parse_with_gpt(args.data_source, args.output_uri)
+        parse_with_gpt(args.data_source, args.output_uri, dry_run=args.dry_run)
     )
