@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MD6L3WYG0S"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-MD6L3WYG0S');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper2Graph batch processing</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css" />
+    <script src="https://kit.fontawesome.com/1a48924413.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <!-- nav -->
+
+    <nav class="navigation container">
+        <div class="nav-brand">
+            Paper2Graph batch processing
+        </div>
+    </nav>
+
+    <!-- content -->
+
+    <div class="hidden" id="new-job-controls">
+        <h2 class="title">Launch new batch job</h2>
+
+        <span class="label">Data source</span>
+        <input id="data-source" class="text-input"/>
+
+        <span class="label">GPT model for job run</span>
+        <div class="model-selection">
+            <input type="radio" id="model1" name="model-select" value="gpt-3.5-turbo" checked>
+            <label for="model1">GPT 3.5</label><br>
+            <input type="radio" id="model2" name="model-select" value="gpt-4">
+            <label for="model2">GPT 4</label><br>
+        </div>
+        
+        <span class="label">Type of job to run</span>
+        <div class="model-selection">
+            <input type="radio" id="jtype1" name="job-type" value="parse">
+            <label for="jtype1">Parse job</label><br>
+            <input type="radio" id="jtype2" name="job-type" value="save">
+            <label for="jtype2">Save job</label><br>
+        </div>
+
+        <div id="parse-job-controls" class="extra-job-controls" style="display: none;">
+        <!-- <div id="parse-job-controls" class="extra-job-controls"> -->
+            <div class="override-check">
+                <input type="checkbox" id="override-parse-output">
+                <label for="override-parse-output">Specify output URI</label>
+            </div>
+            <div id="override-parse-output-container" class="override-input" style="display: none;">
+                <span class="label">Parse output URI</span>
+                <input type="text" id="parse-output-uri" class="text-input" />
+            </div>
+        </div>
+
+        <div id="save-job-controls" class="extra-job-controls" style="display: none;">
+        <!-- <div id="save-job-controls" class="extra-job-controls"> -->
+            <div class="override-check">
+                <input type="checkbox" id="override-neo-uri">
+                <label for="override-neo-uri">Specify Neo4j instance</label>
+            </div>
+            <div id="override-neo-uri-container" class="override-input" style="display: none;">
+                <span class="label">Neo4j connection URI</span>
+                <input type="text" id="neo-uri" class="text-input" />
+            </div>
+
+            <div class="override-check">
+                <input type="checkbox" id="override-neo-user">
+                <label for="override-neo-user">Specify Neo4j username</label>
+            </div>
+            <div id="override-neo-user-container" class="override-input" style="display: none;">
+                <span class="label">Neo4j username</span>
+                <input type="text" id="neo-user" class="text-input" />
+            </div>
+
+            <div class="override-check">
+                <input type="checkbox" id="override-neo-pass">
+                <label for="override-neo-pass">Specify Neo4j password</label>
+            </div>
+            <div id="override-neo-pass-container" class="override-input" style="display: none;">
+                <span class="label">Neo4j password</span>
+                <input type="password" id="neo-password" class="text-input" />
+            </div>
+        </div>
+
+        <button class="link link-primary" id="btn-submit-job" disabled>New batch job</button>
+    </div>
+
+    <div class="hidden" id="job-info">
+        <div class="info-msg">Job currently running</div>
+        <pre id="job-logs"></pre>
+    </div>
+
+    <div class="container container-center">
+        <div class="spinner-container">
+            <div id="job-status-spinner" class="spinner hidden"></div>
+        </div>
+    </div>
+
+    <div id="input-error-msg" class="error-msg" style="display: none;">
+        Must provide data source and select type of job to run.
+    </div>
+    <div id="generic-error-msg" class="error-msg" style="display: none;">
+        Error creating or running batch job. Please check your inputs and try again.
+    </div>
+    <div id="success-msg" class="success-msg" style="display: none;">
+        Batch job completed successfully.
+    </div>
+
+
+    <!-- footer -->
+
+    <!-- <footer class="footer" >
+    </footer> -->
+    <script
+    src="https://js.sentry-cdn.com/4226949e3a1d4812b5c26d55888d470d.min.js"
+    crossorigin="anonymous"
+    ></script>
+    <script src="{{ url_for('static', filename='batch.js') }}"></script>
+</body>
+
+</html>

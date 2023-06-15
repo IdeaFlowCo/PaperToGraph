@@ -2,12 +2,15 @@ import argparse
 import asyncio
 import json
 import os
+from threading import Thread
 
 import sentry_sdk
 
 from flask import Flask, request, jsonify, render_template
 from sentry_sdk.integrations.flask import FlaskIntegration
 
+import batch_parse_job
+import batch_save_job
 import parse
 import save
 import utils
@@ -107,6 +110,73 @@ def save_to_neo():
         return jsonify({'status': 'success'}, 200)
     except json.JSONDecodeError:
         return jsonify({'status': 'error', 'message': 'data provided not valid JSON'}), 400
+
+
+@app.route('/batch')
+def batch_page():
+   return render_template("batch.html")
+
+
+batch_running = False
+
+
+@app.route('/batch-status')
+def batch_status():
+    global batch_running
+    return jsonify({'status': 'running' if batch_running else 'idle'})
+
+
+def __run_job_as_thread(job):
+    global batch_running
+    if batch_running:
+        raise Exception('batch job already running')
+    
+    def thread_target():
+        global batch_running
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(job())
+        loop.close()
+        batch_running = False
+
+    job_thread = Thread(target=thread_target)
+    job_thread.start()
+    batch_running = True
+
+
+@app.route('/new-batch-job', methods=["POST"])
+def new_batch_job():
+    post = request.get_json()
+    log_msg('POST request to /new-batch-job endpoint')
+    __log_args(post)
+
+    global batch_running
+    if batch_running:
+        return jsonify({'status': 'error', 'message': 'batch job already running'}), 400
+    
+    required_args = ['job_type', 'data_source']
+    if post is None or not all(arg in post for arg in required_args):
+        return jsonify(__wrong_payload_response(), 400)
+    
+    if post['job_type'] == 'parse':
+        data_source = post['data_source']
+        output_uri = post.get('output_uri', 's3://paper2graph-parse-results')
+        gpt_model = utils.sanitize_gpt_model_choice(post.get('gpt_model', 'any'))
+        __run_job_as_thread(lambda: batch_parse_job.parse_with_gpt(data_source, output_uri, gpt_model, dry_run=True))
+        return jsonify({'status': 'success', 'message': 'New job started'}), 200
+    elif post['job_type'] == 'save':
+        data_source = post['data_source']
+        neo_config = app.config.get('NEO4J_CREDENTIALS')
+        if 'neo_uri' in post:
+            neo_config['uri'] = post['neo_uri']
+        if 'neo_user' in post:
+            neo_config['user'] = post['neo_user']
+        if 'neo_password' in post:
+            neo_config['password'] = post['neo_password']
+        __run_job_as_thread(lambda: batch_save_job.save_to_neo4j(data_source, neo_config))
+        return jsonify({'status': 'success', 'message': 'New job started'}), 200
+    else:
+        return jsonify({'status': 'error', 'message': 'invalid job_type'}), 400
 
 
 def __handle_neo_credential_override(args):

@@ -56,7 +56,6 @@ textarea {
     border-top-left-radius: 1rem;
     border-bottom-right-radius: 1rem;
     font-size: medium;
-
 }
 
 .justify {
@@ -331,4 +330,93 @@ textarea {
     background-color: #d4edda;
     border: 1px solid #c3e6cb;
     border-radius: 0.25rem;
+}
+
+/* Batch job creator inputs */
+#new-job-controls {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    max-width: 60%;
+    margin: auto;
+}
+
+#new-job-controls .title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #444;
+}
+
+.label {
+    font-size: 0.85em;
+    color: #555;
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+}
+
+#new-job-controls .model-selection {
+    justify-content: flex-start;
+}
+
+#btn-submit-job {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.override-input {
+    display: flex;
+    flex-direction: column;
+}
+
+.override-input input {
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 1.5em;
+}
+
+.text-input {
+    display: block;
+    line-height: 1.5;
+    padding: 0.25em 1ch;
+    color: black;
+    font-family: 'Montserrat', sans-serif;
+    font-size: medium;
+    border: 1px solid #999;
+}
+
+.extra-job-controls {
+    width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 1em;
+    padding-top: 1em;
+    padding-bottom: 1em;
+    padding-left: 50px;
+    background-color: #e9eaec;
+    border-radius: .25rem;
+}
+
+.override-check {
+    margin-bottom: 0.75em;
+}
+
+
+/* Data source input for batch job creator */
+#input-data-source {
+    /* width: 60%;
+    margin-left: auto;
+    margin-right: auto; */
+    border: 1px solid var(--primary-color);
+}
+
+
+#job-info {
+    max-width: 800px;
+    margin: auto;
+    text-align: center;
+}
+
+
+.hidden {
+    display: none !important;
 }
