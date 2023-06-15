@@ -75,12 +75,14 @@ def read_file_from_s3(uri):
     return file_name, file_data
 
 
-def create_timestamped_output_dir(output_uri, dry_run=False):
+def create_output_dir_for_job(data_source, output_uri, dry_run=False):
     '''
     Create a subdirectory for output of this job at the given path and return the key for the new subdirectory.
     '''
+    _, inputpath = parse_s3_uri(data_source)
+    input_dir_name = os.path.basename(inputpath)
     bucket, path = parse_s3_uri(output_uri)
-    output_path = f'{path}/{datetime.now().timestamp()}-output/'.lstrip('/') # If path is empty, trim leading slash
+    output_path = f'{path}/{datetime.now().timestamp()}-{input_dir_name}-output/'.lstrip('/') # If path is empty, trim leading slash
 
     if dry_run:
         log_msg(f'Would have created a subdirectory for job output at s3://{bucket}/{output_path}')

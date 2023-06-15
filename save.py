@@ -98,13 +98,20 @@ def save_dict_of_entities(neo_driver, data, created_ts=None):
             # If that's not the case for some reason, just skip it for now
             continue
         for relationship_name, target in relationships.items():
-            if not isinstance(relationship_name, str) or not isinstance(target, str):
+            # Relationship name is valid if it's a string
+            valid_relationship = isinstance(relationship_name, str)
+            # Target is valid if it's a string or a list of strings
+            valid_target = isinstance(target, str) or (isinstance(target, list) and all(isinstance(t, str) for t in target))
+            if not valid_relationship or not valid_target:
                 # We expect all of these to be str -> str pairs.
                 # If that's not the case, just skip for now.
                 continue
-            create_entity_if_not_exists(neo_driver, target, created_ts)
             relationship_name = sanitize_relationship_name(relationship_name)
-            create_relationship_if_not_exists(neo_driver, name, relationship_name, target, created_ts)
+            if not isinstance(target, list):
+                target = [target]
+            for t in target:
+                create_entity_if_not_exists(neo_driver, t, created_ts)
+                create_relationship_if_not_exists(neo_driver, name, relationship_name, t, created_ts)
 
 
 def save_json_data(json_str, neo_config=None):

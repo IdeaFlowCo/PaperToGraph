@@ -42,7 +42,7 @@ def clean_json(response):
                     continue
             cleaned[key] = value
         cleaned = json.dumps(cleaned, indent=2)
-        log_msg(f'Cleaned up response JSON: \n{cleaned}')
+        # log_msg(f'Cleaned up response JSON: \n{cleaned}')
         return cleaned
     except json.decoder.JSONDecodeError:
         log_msg('Response not valid JSON!')
@@ -121,7 +121,7 @@ async def async_fetch_from_openai(
 
     result = result["choices"][0]["message"]["content"].strip()
     log_msg(f'Received {log_label.lower()} response from OpenAI')
-    log_msg(result)
+    # log_msg(result)
     if result == skip_msg:
         log_msg(f'OpenAI returned designated skip message "{skip_msg}". Returning empty string for this block.')
         return ''

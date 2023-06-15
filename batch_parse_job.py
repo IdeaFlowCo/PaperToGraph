@@ -28,9 +28,11 @@ async def __fetch_input_file(file_uri):
 
 
 async def __process_file(file_uri, job_output_uri, gpt_model, dry_run=False):
-    log_msg(f'Processing file {file_uri}')
-
-    input_file_name, input_data = await __fetch_input_file(file_uri)
+    try:
+        input_file_name, input_data = await __fetch_input_file(file_uri)
+    except UnicodeDecodeError:
+        log_msg(f'Could not decode file {file_uri} as UTF-8. Skipping.')
+        return
 
     file_output_uri = aws.create_output_dir_for_file(job_output_uri, input_file_name, dry_run=dry_run)
 
@@ -60,9 +62,10 @@ async def __write_output_for_file(data, file_output_uri, output_num, dry_run=Fal
 
 async def parse_with_gpt(data_source, output_uri, gpt_model, dry_run=False):
     input_files = await __find_input_files(data_source)
-    job_output_uri = aws.create_timestamped_output_dir(output_uri, dry_run=dry_run)
-    for input_file in input_files:
-       await __process_file(input_file, job_output_uri, gpt_model, dry_run=dry_run)
+    job_output_uri = aws.create_output_dir_for_job(data_source, output_uri, dry_run=dry_run)
+    for i, input_file in enumerate(input_files):
+        log_msg(f'********* Processing file {input_file} ({i+1} out of {len(input_files)})')
+        await __process_file(input_file, job_output_uri, gpt_model, dry_run=dry_run)
 
 
 if __name__ == "__main__":
