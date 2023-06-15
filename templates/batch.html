@@ -52,7 +52,10 @@
         </div>
 
         <div id="parse-job-controls" class="extra-job-controls" style="display: none;">
-        <!-- <div id="parse-job-controls" class="extra-job-controls"> -->
+            <div class="override-check">
+                <input type="checkbox" id="dry-run">
+                <label for="dry-run">Dry run</label>
+            </div>
             <div class="override-check">
                 <input type="checkbox" id="override-parse-output">
                 <label for="override-parse-output">Specify output URI</label>
@@ -64,7 +67,6 @@
         </div>
 
         <div id="save-job-controls" class="extra-job-controls" style="display: none;">
-        <!-- <div id="save-job-controls" class="extra-job-controls"> -->
             <div class="override-check">
                 <input type="checkbox" id="override-neo-uri">
                 <label for="override-neo-uri">Specify Neo4j instance</label>
@@ -96,27 +98,27 @@
         <button class="link link-primary" id="btn-submit-job" disabled>New batch job</button>
     </div>
 
-    <div class="hidden" id="job-info">
-        <div class="info-msg">Job currently running</div>
-        <pre id="job-logs"></pre>
-    </div>
-
     <div class="container container-center">
         <div class="spinner-container">
             <div id="job-status-spinner" class="spinner hidden"></div>
         </div>
     </div>
 
-    <div id="input-error-msg" class="error-msg" style="display: none;">
+    <div id="input-error-msg" class="error-msg hidden">
         Must provide data source and select type of job to run.
     </div>
-    <div id="generic-error-msg" class="error-msg" style="display: none;">
+    <div id="generic-error-msg" class="error-msg hidden">
         Error creating or running batch job. Please check your inputs and try again.
     </div>
-    <div id="success-msg" class="success-msg" style="display: none;">
-        Batch job completed successfully.
+    <div id="success-msg" class="success-msg hidden">
+        Batch job submitted successfully.
     </div>
 
+    <div class="hidden" id="job-info">
+        <div class="info-msg">Job currently running</div>
+        <span class="label">Job logs</span>
+        <pre id="job-logs"></pre>
+    </div>
 
     <!-- footer -->
 

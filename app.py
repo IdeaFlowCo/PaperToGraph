@@ -6,13 +6,14 @@ from threading import Thread
 
 import sentry_sdk
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, Response
 from sentry_sdk.integrations.flask import FlaskIntegration
 
 import batch_parse_job
 import batch_save_job
 import parse
 import save
+import time
 import utils
 from utils import log_msg
 
@@ -126,7 +127,7 @@ def batch_status():
     return jsonify({'status': 'running' if batch_running else 'idle'})
 
 
-def __run_job_as_thread(job):
+def __run_job_as_thread(thread_name, job):
     global batch_running
     if batch_running:
         raise Exception('batch job already running')
@@ -139,9 +140,12 @@ def __run_job_as_thread(job):
         loop.close()
         batch_running = False
 
-    job_thread = Thread(target=thread_target)
+    job_thread = Thread(name=thread_name, target=thread_target)
     job_thread.start()
     batch_running = True
+
+
+BATCH_JOB_LOG_FILE = 'logs/batch-job.log'
 
 
 @app.route('/new-batch-job', methods=["POST"])
@@ -159,12 +163,19 @@ def new_batch_job():
         return jsonify(__wrong_payload_response(), 400)
     
     if post['job_type'] == 'parse':
+        thread_name = utils.BATCH_PARSE_THREAD_NAME
+        utils.setup_logger(name=thread_name, log_file=BATCH_JOB_LOG_FILE)
+        gpt_model = utils.sanitize_gpt_model_choice(post.get('gpt_model', 'any'))
+        dry_run = post.get('dry_run', False)
+        parse_job = batch_parse_job.BatchParseJob(gpt_model=gpt_model, dry_run=dry_run)
+
         data_source = post['data_source']
         output_uri = post.get('output_uri', 's3://paper2graph-parse-results')
-        gpt_model = utils.sanitize_gpt_model_choice(post.get('gpt_model', 'any'))
-        __run_job_as_thread(lambda: batch_parse_job.parse_with_gpt(data_source, output_uri, gpt_model, dry_run=True))
+        __run_job_as_thread(thread_name, lambda: parse_job.run(data_source, output_uri))
         return jsonify({'status': 'success', 'message': 'New job started'}), 200
     elif post['job_type'] == 'save':
+        thread_name = utils.BATCH_SAVE_THREAD_NAME
+        utils.setup_logger(name=thread_name, log_file=BATCH_JOB_LOG_FILE)
         data_source = post['data_source']
         neo_config = app.config.get('NEO4J_CREDENTIALS')
         if 'neo_uri' in post:
@@ -177,6 +188,26 @@ def new_batch_job():
         return jsonify({'status': 'success', 'message': 'New job started'}), 200
     else:
         return jsonify({'status': 'error', 'message': 'invalid job_type'}), 400
+
+
+@app.route('/batch-log', methods=["GET"])
+def batch_log():
+    def log_tail(file_path):
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+            # Yield last 20 lines as context
+            for line in lines[-20:]:
+                yield f'data:{line}\n\n'
+            # Watch for new lines and yield them as they are added
+            while True:
+                current_position = file.tell()
+                line = file.readline().rstrip()
+                if line:
+                    yield f'data:{line}\n\n'
+                else:
+                    file.seek(current_position)
+                    time.sleep(0.25)
+    return Response(log_tail(BATCH_JOB_LOG_FILE), mimetype= 'text/event-stream')
 
 
 def __handle_neo_credential_override(args):
@@ -197,6 +228,8 @@ if __name__ == '__main__':
     args = argparser.parse_args()
 
     __handle_neo_credential_override(args)
+
+    utils.setup_logger()
 
     log_msg('Starting server...')
     if args.local:

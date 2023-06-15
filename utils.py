@@ -1,13 +1,49 @@
 from datetime import datetime
+import logging
 import os
+import sys
+import threading
+
+
+BATCH_PARSE_THREAD_NAME = 'p2g-batch-parse'
+BATCH_SAVE_THREAD_NAME = 'p2g-batch-save'
+BATCH_THREAD_NAMES = {BATCH_PARSE_THREAD_NAME, BATCH_SAVE_THREAD_NAME}
+
+def get_logger():
+    if threading.current_thread().name in BATCH_THREAD_NAMES:
+        logger_name = threading.current_thread().name
+    else:
+        logger_name = 'paper2graph'
+    return logging.getLogger(logger_name)
 
 
 def log_msg(msg:str):
     '''
     Log provided message in a standardized way.
     '''
-    ts = datetime.now().isoformat(timespec='seconds')
-    print(f'[{ts}] {msg}')
+    return get_logger().info(msg)
+
+
+def setup_logger(name=None, log_file=None):
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    formatter = logging.Formatter('[%(asctime)s][%(name)s][%(levelname)s] %(message)s')
+
+    stdout_handler = logging.StreamHandler(sys.stdout)
+    stdout_handler.setLevel(logging.INFO)
+    stdout_handler.setFormatter(formatter)
+    logger.addHandler(stdout_handler)
+
+    if log_file:
+        if os.path.dirname(log_file):
+            # Make intermediate directories if necessary
+            os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+
+    return logger
 
 
 def add_neo_credential_override_args(parser):

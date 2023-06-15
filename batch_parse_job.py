@@ -7,65 +7,69 @@ import utils
 from utils import log_msg
 
 
-DEFAULT_GPT_MODEL = 'gpt-3.5-turbo'
+class BatchParseJob:
+    def __init__(self, gpt_model=None, dry_run=False):
+        self.gpt_model = utils.sanitize_gpt_model_choice(gpt_model)
+        self.dry_run = dry_run
+
+    async def __find_input_files(self, data_source):
+        files = aws.get_objects_at_s3_uri(data_source)
+        if not files:
+            raise Exception(f'No files found at {data_source}')
+
+        log_msg(f'Found {len(files)} files to process')
+        log_msg(files)
+        return files
 
 
-async def __find_input_files(data_source):
-    files = aws.get_objects_at_s3_uri(data_source)
-    if not files:
-      raise Exception(f'No files found at {data_source}')
-
-    log_msg(f'Found {len(files)} files to process')
-    log_msg(files)
-    return files
+    async def __fetch_input_file(self, file_uri):
+        log_msg(f'Fetching file {file_uri}')
+        file_name, data = aws.read_file_from_s3(file_uri)
+        log_msg(f'Loaded {len(data)} bytes')
+        return file_name, data
 
 
-async def __fetch_input_file(file_uri):
-    log_msg(f'Fetching file {file_uri}')
-    file_name, data = aws.read_file_from_s3(file_uri)
-    log_msg(f'Loaded {len(data)} bytes')
-    return file_name, data
+    async def __process_file(self, file_uri, job_output_uri):
+        try:
+            input_file_name, input_data = await self.__fetch_input_file(file_uri)
+        except UnicodeDecodeError:
+            log_msg(f'Could not decode file {file_uri} as UTF-8. Skipping.')
+            return
+
+        file_output_uri = aws.create_output_dir_for_file(job_output_uri, input_file_name, dry_run=self.dry_run)
+
+        log_msg(f'Beginning parse of file: {input_file_name}')
+        output_num = 0
+        async for parse_result in parse.parse_with_gpt_multitask(input_data, model=self.gpt_model):
+            # Create a task for each output chunk so that we can write them in parallel
+            asyncio.create_task(
+                self.__write_output_for_file(
+                    parse_result, 
+                    file_output_uri,
+                    output_num))
+            output_num += 1
 
 
-async def __process_file(file_uri, job_output_uri, gpt_model, dry_run=False):
-    try:
-        input_file_name, input_data = await __fetch_input_file(file_uri)
-    except UnicodeDecodeError:
-        log_msg(f'Could not decode file {file_uri} as UTF-8. Skipping.')
-        return
+    async def __write_output_for_file(self, output_data, file_output_uri, output_num):
+        output_chunk_uri = f'{file_output_uri.rstrip("/")}/output_{output_num}.json'
+        log_msg(f'Writing output chunk {output_num} to {output_chunk_uri}')
 
-    file_output_uri = aws.create_output_dir_for_file(job_output_uri, input_file_name, dry_run=dry_run)
+        if self.dry_run:
+            log_msg(f'Would have written {len(output_data)} bytes')
+            return
 
-    log_msg(f'Beginning parse of file: {input_file_name}')
-    output_num = 0
-    async for parse_result in parse.parse_with_gpt_multitask(input_data, model=gpt_model):
-        # Create a task for each output chunk so that we can write them in parallel
-        asyncio.create_task(
-            __write_output_for_file(
-                parse_result, 
-                file_output_uri,
-                output_num,
-                dry_run=dry_run))
-        output_num += 1
+        aws.write_file_to_s3(output_chunk_uri, output_data)
 
 
-async def __write_output_for_file(data, file_output_uri, output_num, dry_run=False):
-    output_chunk_uri = f'{file_output_uri.rstrip("/")}/output_{output_num}.json'
-    log_msg(f'Writing output chunk {output_num} to {output_chunk_uri}')
-
-    if dry_run:
-        log_msg(f'Would have written {len(data)} bytes')
-        return
-
-    aws.write_file_to_s3(output_chunk_uri, data)
+    async def run(self, data_source, output_uri):
+        log_msg(f'Beginning parse job for {data_source} using GPT model {self.gpt_model}')
+        input_files = await self.__find_input_files(data_source)
+        job_output_uri = aws.create_output_dir_for_job(data_source, output_uri, dry_run=self.dry_run)
+        for i, input_file in enumerate(input_files):
+            log_msg(f'********* Processing file {input_file} ({i+1} out of {len(input_files)})')
+            await self.__process_file(input_file, job_output_uri)
 
 
-async def parse_with_gpt(data_source, output_uri, gpt_model, dry_run=False):
-    input_files = await __find_input_files(data_source)
-    job_output_uri = aws.create_output_dir_for_job(data_source, output_uri, dry_run=dry_run)
-    for i, input_file in enumerate(input_files):
-        log_msg(f'********* Processing file {input_file} ({i+1} out of {len(input_files)})')
-        await __process_file(input_file, job_output_uri, gpt_model, dry_run=dry_run)
 
 
 if __name__ == "__main__":
@@ -82,7 +86,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         '--gpt_model',
-        default=DEFAULT_GPT_MODEL,
+        default='gpt-3.5-turbo',
         help="The GPT model to use when parsing."
     )
     parser.add_argument(
@@ -93,9 +97,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    gpt_model = utils.sanitize_gpt_model_choice(args.gpt_model)
-    log_msg(f'Using GPT model "{gpt_model}"')
+    parse_job = BatchParseJob(gpt_model=args.gpt_model, dry_run=args.dry_run)
 
     asyncio.run(
-        parse_with_gpt(args.data_source, args.output_uri, args.gpt_model, dry_run=args.dry_run)
+        parse_job.run(args.data_source, args.output_uri)
     )

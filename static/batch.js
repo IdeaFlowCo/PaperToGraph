@@ -20,6 +20,7 @@
     jobTypeInputs.forEach((input) => input.addEventListener('change', handleJobTypeChange));
 
     // Extra controls for overriding parse job parameters
+    const dryRunCheckbox = document.querySelector("#dry-run");
     const overrideParseOutput = document.querySelector("#override-parse-output");
 
     // Extra controls for overriding save job parameters
@@ -56,8 +57,13 @@
         };
 
         const overrides = {};
-        if (overrideParseOutput.checked) {
-            overrides['output_uri'] = document.querySelector('#parse-output-uri').value;
+        if (jobType === 'parse') {
+            if (dryRunCheckbox.checked) {
+                overrides['dry_run'] = true;
+            }
+            if (overrideParseOutput.checked) {
+                overrides['output_uri'] = document.querySelector('#parse-output-uri').value;
+            }
         }
         if (overrideNeoUri.checked) {
             overrides['neo_uri'] = document.querySelector('#neo-uri').value;
@@ -72,15 +78,33 @@
         return Object.assign({}, body, overrides);
     }
 
+    const jobLogs = document.querySelector('#job-logs');
+    const streamJobLogs = () => {
+        console.log('here');
+        const source = new EventSource('batch-log');
+        source.onmessage = (event) => {
+            console.log(event);
+            if (event.data === 'done') {
+                source.close();
+                return;
+            }
+            jobLogs.innerHTML += event.data + '<br>';
+        }
+    }
+
     const inputErrorMsg = document.querySelector('#input-error-msg');
     const genericErrorMsg = document.querySelector('#generic-error-msg');
     const successMsg = document.querySelector('#success-msg');
 
+
     const handleSubmitClick = async () => {
         // Hide any messages from previous attempts
-        inputErrorMsg.style.display = 'none';
-        genericErrorMsg.style.display = 'none';
-        successMsg.style.display = 'none';
+        inputErrorMsg.classList.add('hidden');
+        genericErrorMsg.classList.add('hidden');
+        successMsg.classList.add('hidden');
+
+        // Disable submit button
+        submitJobButton.disabled = true;
 
         const response = await fetch('new-batch-job', {
             method: 'POST',
@@ -96,13 +120,19 @@
             console.log('Received submit response:', parsedResponse);
 
             if (response.ok) {
-                successMsg.style.display = 'block';
+                successMsg.classList.remove('hidden');
+                jobInfo.classList.remove('hidden');
+                streamJobLogs();
             } else {
-                inputErrorMsg.style.display = 'block';
+                inputErrorMsg.classList.remove('hidden');
+                // Re-enable submit button so user can try again
+                submitJobButton.disabled = false;
             }
         } catch (e) {
             console.error(e);
-            genericErrorMsg.style.display = 'block';
+            genericErrorMsg.classList.remove('hidden');
+            // Re-enable submit button so user can try again
+            submitJobButton.disabled = false;
         }
     };
     submitJobButton.addEventListener('click', handleSubmitClick);
@@ -129,6 +159,7 @@
                 // Hide spinner, show job info
                 jobStatusSpinner.classList.add('hidden');
                 jobInfo.classList.remove('hidden');
+                streamJobLogs();
             } else {
                 // Hide spinner, show new job controls
                 jobStatusSpinner.classList.add('hidden');

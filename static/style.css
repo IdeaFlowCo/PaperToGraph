@@ -413,7 +413,16 @@ textarea {
 #job-info {
     max-width: 800px;
     margin: auto;
+}
+
+.info-msg {
     text-align: center;
+}
+
+#job-logs {
+    max-height: 500px;
+    overflow: auto;
+    text-align: left;
 }
 
 
