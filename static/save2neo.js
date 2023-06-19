@@ -1,5 +1,6 @@
 'use strict';
 (() => {
+    const translateInput = document.querySelector("#input-translate");
     // const translate = document.querySelector("#btn-translate");
     const rawParseButton = document.querySelector("#btn-raw-parse");
     
@@ -55,6 +56,7 @@
         showSpinnerForSave();
     
         const dataToPost = saveTextInput.value.trim();
+        const inputText = translateInput.value.trim();
 
         // Trim the input displayed to make it clear that we're doing that before sending
         saveTextInput.value = dataToPost;
@@ -73,7 +75,8 @@
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                'data': dataToPost
+                'data': dataToPost,
+                'input_text': inputText
             })
         });
     

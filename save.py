@@ -2,12 +2,14 @@
 Functions for saving parsed data to Neo4j.
 '''
 
+import hashlib
 import json
-from re import escape, sub
+from re import sub
 
 from neo4j import GraphDatabase
 from neo4j.time import DateTime
 
+import aws
 from utils import log_msg
 
 
@@ -28,8 +30,9 @@ def sanitize_relationship_name(relationship):
     relationship)).split()).lower()
 
 
+
 # Function to create an entity in the database if it doesn't exist
-def create_entity_if_not_exists(driver, name, timestamp):
+def create_entity_if_not_exists(driver, name, source, timestamp):
     with driver.session() as session:
         normalized_name = normalize_entity_name(name)
         result = session.run("MATCH (ent:Entity {normalized_name: $name}) RETURN count(ent) AS count", name=normalized_name)
@@ -37,40 +40,44 @@ def create_entity_if_not_exists(driver, name, timestamp):
         if count == 0:
             session.run(
                 # Note: have to call datetime() on created_at here to avoid getting localdatetime types by default
-                "CREATE (:Entity {name: $name, normalized_name: $normalized_name, created_at: datetime($created_at)})", 
+                "CREATE (:Entity {name: $name, normalized_name: $normalized_name, source: $source, created_at: datetime($created_at)})", 
                 name=name,
                 normalized_name=normalized_name,
+                source=source,
                 created_at=timestamp,
             )
             log_msg(f"Entity '{name}' created in the database.")
         else:
+            # TODO: append source to existing entity's source list
             log_msg(f"Entity '{name}' already exists in the database.")
 
 
 # Function to create a named relationship between two entities if it doesn't exist
-def create_relationship_if_not_exists(driver, ent1_name, relationship_name, ent2_name, timestamp):
+def create_or_update_relationships(driver, ent1_name, relationship_name, ent2_name, source, timestamp):
     with driver.session() as session:
         n_ent1_name = normalize_entity_name(ent1_name)
         n_ent2_name = normalize_entity_name(ent2_name)
-        result = session.run(
-            "MATCH (ent1:Entity {normalized_name: $ent1_name})-[r:%s]->(ent2:Entity {normalized_name: $ent2_name}) RETURN count(r) AS count"
+        session.run(
+            "MATCH (e1:Entity {normalized_name: $ent1_name}) "
+            "MATCH (e2:Entity {normalized_name: $ent2_name}) "
+            "MERGE (e1)-[r:%s]->(e2) "
+            "ON CREATE SET r.sources = $source, r.created_at = datetime($created_at)"
+            "ON MATCH SET r.sources = CASE "
+            "   WHEN r.sources IS NULL THEN $source "
+            "   ELSE CASE "
+            "       WHEN NOT $source IN r.sources THEN r.sources + $source "
+            "       ELSE r.sources "
+            "   END "
+            "END "
+            "RETURN r"
             % (relationship_name),
             ent1_name=n_ent1_name,
             ent2_name=n_ent2_name,
+            source=source,
+            created_at=timestamp,
         )
-        count = result.single()["count"]
-        if count == 0:
-            session.run(
-                "MATCH (ent1:Entity {normalized_name: $ent1_name}), (ent2:Entity {normalized_name: $ent2_name}) "
-                # Note: have to call datetime() on created_at here to avoid getting localdatetime types by default
-                "CREATE (ent1)-[r:%s {created_at: datetime($created_at)}]->(ent2)" % (relationship_name),
-                ent1_name=n_ent1_name,
-                ent2_name=n_ent2_name,
-                created_at=timestamp,
-            )
-            log_msg(f"Relationship '{relationship_name}' created between '{ent1_name}' and '{ent2_name}'.")
-        else:
-            log_msg(f"Relationship '{relationship_name}' already exists between '{ent1_name}' and '{ent2_name}'.")
+        # TODO: Check result for any extra logging or error handling logic
+        log_msg('Relationship created or updated')
 
 
 def __get_neo4j_driver(neo_config):
@@ -96,12 +103,12 @@ def __get_neo4j_driver(neo_config):
     return GraphDatabase.driver(uri, auth=(user, password))
 
 
-def save_dict_of_entities(neo_driver, data, created_ts=None):
+def save_dict_of_entities(neo_driver, data, source=None, created_ts=None):
     if not created_ts:
         created_ts = DateTime.now()
 
     for name, relationships in data.items():
-        create_entity_if_not_exists(neo_driver, name, created_ts)
+        create_entity_if_not_exists(neo_driver, name, source, created_ts)
         if not isinstance(relationships, dict):
             # We expect every top level value to be a dict of relationships for the named key.
             # If that's not the case for some reason, just skip it for now
@@ -119,11 +126,11 @@ def save_dict_of_entities(neo_driver, data, created_ts=None):
             if not isinstance(target, list):
                 target = [target]
             for t in target:
-                create_entity_if_not_exists(neo_driver, t, created_ts)
-                create_relationship_if_not_exists(neo_driver, name, relationship_name, t, created_ts)
+                create_entity_if_not_exists(neo_driver, t, source, created_ts)
+                create_or_update_relationships(neo_driver, name, relationship_name, t, source, created_ts)
 
 
-def save_json_data(json_str, neo_config=None):
+def save_json_data(json_str, saved_input_uri=None, neo_config=None):
     # Create a Neo4j driver instance
     driver = __get_neo4j_driver(neo_config)
 
@@ -133,10 +140,10 @@ def save_json_data(json_str, neo_config=None):
     try:
         parsed = json.loads(json_str)
         if isinstance(parsed, dict):
-            save_dict_of_entities(driver, parsed, created_ts=created_ts)
+            save_dict_of_entities(driver, parsed, source=saved_input_uri, created_ts=created_ts)
         elif isinstance(parsed, list):
             for obj in parsed:
-                save_dict_of_entities(driver, obj, created_ts=created_ts)
+                save_dict_of_entities(driver, obj, source=saved_input_uri, created_ts=created_ts)
         else:
             log_msg('Unexpected input type. Expected JSON object or array.')
             log_msg(f'Received: {json_str}')
@@ -148,4 +155,15 @@ def save_json_data(json_str, neo_config=None):
         raise err
     finally:
         driver.close()
-    
+
+
+WEB_SUBMISSIONS_URI = 's3://paper2graph-parse-inputs/web-submissions/'
+HASH_SLUG_LENGTH = 12
+
+def save_input_text(text):
+    hash_slug = hashlib.sha256(text.encode('utf-8')).hexdigest()[:HASH_SLUG_LENGTH]
+    output_uri = f'{WEB_SUBMISSIONS_URI.rstrip("/")}/{hash_slug}.txt'
+    log_msg(f'Saving input text to {output_uri}')
+    # This call will raise Exception if any issue, but just let that bubble up:
+    aws.write_file_to_s3(output_uri, text)
+    return output_uri

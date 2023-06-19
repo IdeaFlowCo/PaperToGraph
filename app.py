@@ -1,7 +1,6 @@
 import argparse
 import asyncio
 import json
-import os
 from threading import Thread
 
 import sentry_sdk
@@ -103,14 +102,20 @@ def save_to_neo():
     log_msg('POST request to /save-to-neo endpoint')
     __log_args(post)
     
-    if post is None or 'data' not in post:
+    required_args = ['data', 'input_text']
+    if post is None or not all(arg in post for arg in required_args):
         return jsonify(__wrong_payload_response(), 400)
     
     try:
-        save.save_json_data(post['data'], neo_config=app.config.get('NEO4J_CREDENTIALS'))
+        # Make sure data is valid JSON
+        json.loads(post['data'])
+        log_msg('About to save input text')
+        saved_input_uri = save.save_input_text(post['input_text'])
+        log_msg('Saved input text')
+        save.save_json_data(post['data'], saved_input_uri=saved_input_uri, neo_config=app.config.get('NEO4J_CREDENTIALS'))
         return jsonify({'status': 'success'}, 200)
     except json.JSONDecodeError:
-        return jsonify({'status': 'error', 'message': 'data provided not valid JSON'}), 400
+        return jsonify({'status': 'error', 'message': 'data provided not valid JSON'}, 400)
 
 
 @app.route('/batch')
