@@ -1,5 +1,8 @@
 const translateInput = document.querySelector("#input-translate");
 
+const overridePromptCheckbox = document.querySelector('#override-prompt');
+const overridePromptInput = document.querySelector('#prompt-override-text');
+
 // const translate = document.querySelector("#btn-translate");
 const rawParseButton = document.querySelector("#btn-raw-parse");
 const translateSpinner = document.querySelector("#translate-loading");
@@ -18,10 +21,14 @@ function buildBodyForTranslate() {
     const model_selection = document.querySelector('input[name="model-select"]:checked')
     const model = model_selection?.value ?? 'any';
     const text = translateInput.value;
-    return {
+    const body = {
       'model': model,
       'text': text,
     };
+    if (overridePromptCheckbox.checked) {
+      body['prompt_override'] = overridePromptInput.value;
+    }
+    return body;
 }
 
 function showSpinnerForTranslate() {
@@ -104,7 +111,43 @@ function calcInputWordCount() {
   wordCountLabel.innerText = `Word count: ${wordCount}`
 }
 
+const DEFAULT_PARSE_PROMPT = `
+Each user message will be input text to process. Extract the named entities and their relationships from the text provided. The output should be formatted as a JSON object. Each key in the output object should be the name of an extracted entity. Each value should be an object with a key for each relationship and values representing the target of the relationship. 
+
+For example, if provided the following input:
+\`\`\`
+Tom Currier is a great guy who built lots of communities after he studied at Stanford and Harvard. He also won the Thiel fellowship. 
+\`\`\`
+An acceptable output would be:
+\`\`\`
+{
+  "Tom Currier": {
+    "studied at": "Stanford, Harvard",
+    "winner of": "Thiel Fellowship"
+  }
+}
+\`\`\`
+
+If no entities or relationships can be extracted from the text provided, respond with NO_ENTITIES_FOUND. Responses should consist only of the extracted data in JSON format, or the string NO_ENTITIES_FOUND.`;
+
+const setDefaultOverridePrompt = () => {
+  overridePromptInput.value = DEFAULT_PARSE_PROMPT.trim();
+}
+
+const handlePromptOverrideCheck = () => {
+    const checkbox = document.querySelector('#override-prompt');
+    const overrideInputContainer = document.querySelector('#override-prompt-container');
+
+    if (checkbox.checked) {
+        overrideInputContainer.style.display = 'block';
+        setDefaultOverridePrompt();
+    } else {
+        overrideInputContainer.style.display = 'none';
+    }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
+  overridePromptCheckbox.addEventListener('change', handlePromptOverrideCheck);
   calcInputTextLength();
   calcInputWordCount();
   translateInput.addEventListener('change', calcInputTextLength);

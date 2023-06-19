@@ -57,15 +57,23 @@ PARSE_SYSTEM_MESSAGE = {
 
 
 
-async def async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False):
+async def async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False, prompt_override=None):
     '''
     Retrieve parse response from GPT for given block of text.
     '''
     max_tokens = 2000 if model == 'gpt-4' else 1600
     timeout = 90 if model == 'gpt-4' else 60
 
+    if prompt_override:
+        system_message = {
+            "role": "system", 
+            "content": prompt_override
+        }
+    else:
+        system_message = PARSE_SYSTEM_MESSAGE
+
     messages = [
-        PARSE_SYSTEM_MESSAGE,
+        system_message,
         {"role": "user", "content": text}
     ]
 

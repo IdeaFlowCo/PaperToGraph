@@ -49,7 +49,7 @@ textarea {
     border: 1px solid var(--primary-color);
     color: black;
     width: 90%;
-    text-align: center;
+    text-align: left;
     margin-left: auto;
     margin-right: auto;
     font-family: 'Montserrat', sans-serif;
@@ -428,4 +428,14 @@ textarea {
 
 .hidden {
     display: none !important;
+}
+
+
+
+#override-prompt-container {
+    text-align: left;
+}
+
+#prompt-override-text {
+    border: 1px solid #999;
 }

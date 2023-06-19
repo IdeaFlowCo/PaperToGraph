@@ -52,6 +52,15 @@
             <label for="model2">GPT 4</label><br>
         </div>
 
+        <div class="override-check">
+            <input type="checkbox" id="override-prompt">
+            <label for="override-prompt">Send custom prompt to GPT</label>
+        </div>
+        <div id="override-prompt-container" class="override-input" style="display: none;">
+            <span class="label">Prompt to send to GPT</span>
+            <textarea id="prompt-override-text"></textarea>
+        </div>
+
         <div class="spinner-container">
             <!-- <button class="link link-primary" id="btn-translate">Translate</button> -->
             <!-- <button class="link link-secondary" id="btn-raw-parse">Raw parse</button> -->

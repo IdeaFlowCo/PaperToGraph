@@ -50,7 +50,7 @@ async def parse_with_gpt_multitask(text: str, model="gpt-3.5-turbo"):
         yield result
 
 
-async def async_parse_with_heartbeat(text: str, model="gpt-3.5-turbo"):
+async def async_parse_with_heartbeat(text: str, model="gpt-3.5-turbo", prompt_override=None):
     '''
     Parser structured as generator that periodically yields blank characters to keep HTTP connection alive.
     '''
@@ -61,7 +61,7 @@ async def async_parse_with_heartbeat(text: str, model="gpt-3.5-turbo"):
     # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
     # this is hopefully acceptable behavior.
     # The benefit is that the total parsing is much more resilient with some fault tolerance.
-    parse_work_fn = lambda chunk: gpt.async_fetch_parse(chunk, model=model, skip_on_error=True)
+    parse_work_fn = lambda chunk: gpt.async_fetch_parse(chunk, model=model, skip_on_error=True, prompt_override=prompt_override)
     async for chunk in tasks.split_and_run_tasks_with_heartbeat(
         task_inputs=text_chunks, 
         work_fn=parse_work_fn, 

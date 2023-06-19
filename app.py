@@ -64,9 +64,9 @@ def iter_over_async(ait):
         yield obj
 
 
-def __create_parse_response(message:str, model:str):
+def __create_parse_response(message:str, model:str, prompt_override=None):
     model = utils.sanitize_gpt_model_choice(model)
-    iter = iter_over_async(parse.async_parse_with_heartbeat(message, model=model))
+    iter = iter_over_async(parse.async_parse_with_heartbeat(message, model=model, prompt_override=prompt_override))
     return app.response_class(iter, mimetype='application/json')
 
 
@@ -91,7 +91,7 @@ def raw_parse():
     __log_args(post)
     
     if post is not None:
-        return __create_parse_response(post['text'], post['model'])
+        return __create_parse_response(post['text'], post['model'], prompt_override=post.get('prompt_override', None))
     else:
         return jsonify(__wrong_payload_response(), 400)
 
