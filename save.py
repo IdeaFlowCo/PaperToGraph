@@ -52,7 +52,7 @@ def create_or_update_entity(driver, name, source, timestamp):
             created_at=timestamp,
         )
         # TODO: Check result for any extra logging or error handling logic
-        log_msg('Relationship created or updated')
+        log_msg('Entity created or updated')
 
 
 # Function to create a named relationship between two entities if it doesn't exist

@@ -31,7 +31,11 @@ async def __process_file(file_uri, neo_config):
     input_file_name, input_data = await __fetch_input_file(file_uri)
 
     log_msg(f'Saving data from {input_file_name} to Neo4j')
-    save.save_json_data(input_data, saved_input_uri=file_uri, neo_config=neo_config)
+    try:
+        save.save_json_data(input_data, saved_input_uri=file_uri, neo_config=neo_config)
+    except Exception as err:
+        log_msg('Exception raised when saving data. Swallowing to proceed with rest of job.')
+        log_msg(f'Exception: {err}')
     
 
 async def save_to_neo4j(data_source, neo_config):

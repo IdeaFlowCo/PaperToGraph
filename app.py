@@ -1,7 +1,7 @@
 import argparse
 import asyncio
 import json
-from threading import Thread
+from threading import Event, Thread
 
 import sentry_sdk
 
@@ -123,31 +123,31 @@ def batch_page():
    return render_template("batch.html")
 
 
-batch_running = False
+batch_running = Event()
 
 
 @app.route('/batch-status')
 def batch_status():
     global batch_running
-    return jsonify({'status': 'running' if batch_running else 'idle'})
+    return jsonify({'status': 'running' if batch_running.is_set() else 'idle'})
 
 
 def __run_job_as_thread(thread_name, job):
     global batch_running
-    if batch_running:
+    if batch_running.is_set():
         raise Exception('batch job already running')
     
     def thread_target():
         global batch_running
+        batch_running.set()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(job())
         loop.close()
-        batch_running = False
+        batch_running.clear()
 
     job_thread = Thread(name=thread_name, target=thread_target)
     job_thread.start()
-    batch_running = True
 
 
 BATCH_JOB_LOG_FILE = 'logs/batch-job.log'
@@ -160,7 +160,7 @@ def new_batch_job():
     __log_args(post)
 
     global batch_running
-    if batch_running:
+    if batch_running.is_set():
         return jsonify({'status': 'error', 'message': 'batch job already running'}), 400
     
     required_args = ['job_type', 'data_source']
@@ -189,7 +189,7 @@ def new_batch_job():
             neo_config['user'] = post['neo_user']
         if 'neo_password' in post:
             neo_config['password'] = post['neo_password']
-        __run_job_as_thread(lambda: batch_save_job.save_to_neo4j(data_source, neo_config))
+        __run_job_as_thread(thread_name, lambda: batch_save_job.save_to_neo4j(data_source, neo_config))
         return jsonify({'status': 'success', 'message': 'New job started'}), 200
     else:
         return jsonify({'status': 'error', 'message': 'invalid job_type'}), 400
