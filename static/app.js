@@ -112,7 +112,7 @@ function calcInputWordCount() {
 }
 
 const DEFAULT_PARSE_PROMPT = `
-Each user message will be input text to process. Extract the named entities and their relationships from the text provided. The output should be formatted as a JSON object. Each key in the output object should be the name of an extracted entity. Each value should be an object with a key for each relationship and values representing the target of the relationship. 
+Each user message will be input text to process. Extract the named entities and their relationships from the text provided. The output should be formatted as a JSON object. Each key in the output object should be the name of an extracted entity. Each value should be an object with a key for each relationship and values representing the target of the relationship. Be sure to separate all comma separated entities that may occur in results into separate items in a list.
 
 For example, if provided the following input:
 \`\`\`
@@ -122,13 +122,14 @@ An acceptable output would be:
 \`\`\`
 {
   "Tom Currier": {
-    "studied at": "Stanford, Harvard",
+    "studied at": ["Stanford", "Harvard"],
     "winner of": "Thiel Fellowship"
   }
 }
 \`\`\`
 
-If no entities or relationships can be extracted from the text provided, respond with NO_ENTITIES_FOUND. Responses should consist only of the extracted data in JSON format, or the string NO_ENTITIES_FOUND.`;
+If no entities or relationships can be extracted from the text provided, respond with NO_ENTITIES_FOUND. Responses should consist only of the extracted data in JSON format, or the string NO_ENTITIES_FOUND.
+`;
 
 const setDefaultOverridePrompt = () => {
   overridePromptInput.value = DEFAULT_PARSE_PROMPT.trim();
