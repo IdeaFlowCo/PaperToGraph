@@ -148,6 +148,7 @@ const handlePromptOverrideCheck = () => {
 
 document.addEventListener('DOMContentLoaded', function() {
   overridePromptCheckbox.addEventListener('change', handlePromptOverrideCheck);
+  translateInput.value = translateInput.value.trim();
   calcInputTextLength();
   calcInputWordCount();
   translateInput.addEventListener('change', calcInputTextLength);
