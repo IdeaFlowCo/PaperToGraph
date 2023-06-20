@@ -80,15 +80,17 @@
 
     const jobLogs = document.querySelector('#job-logs');
     const streamJobLogs = () => {
-        console.log('here');
         const source = new EventSource('batch-log');
         source.onmessage = (event) => {
             console.log(event);
-            if (event.data === 'done') {
+            const eventData = event.data.trim();
+            if (eventData === 'done') {
                 source.close();
                 return;
             }
-            jobLogs.innerHTML += event.data + '<br>';
+            if (eventData != 'nodata') {
+                jobLogs.innerHTML += eventData + '<br>';
+            }
         }
     }
 
