@@ -101,6 +101,8 @@ textarea {
 /* navbar */
 
 .navigation {
+    display: flex;
+    flex-direction: row;
     border: 1px solid var(--navbar-color);
     background-color: var(--navbar-color);
     border-top-right-radius: 1rem;
@@ -112,11 +114,20 @@ textarea {
 .navigation .nav-brand {
     font-weight: bolder;
     color: white;
+    font-size: 1.2em;
+}
+
+.navigation .spacer {
+    flex-grow: 1;
 }
 
 .navigation .link {
     color: white;
     text-align: right;
+}
+
+.navigation .link + .link {
+    margin-left: 2ch;
 }
 
 .navigation .nav-pills {
