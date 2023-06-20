@@ -1,7 +1,8 @@
 import argparse
 import asyncio
 import json
-from threading import Event, Thread
+from multiprocessing import Value
+from threading import Thread
 
 import sentry_sdk
 
@@ -17,17 +18,17 @@ import utils
 from utils import log_msg
 
 
-# sentry_sdk.init(
-#     dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
-#     integrations=[
-#         FlaskIntegration(),
-#     ],
+sentry_sdk.init(
+    dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
+    integrations=[
+        FlaskIntegration(),
+    ],
 
-#     # Set traces_sample_rate to 1.0 to capture 100%
-#     # of transactions for performance monitoring.
-#     # Sentry recommends adjusting this value in production.
-#     traces_sample_rate=1.0
-# )
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # Sentry recommends adjusting this value in production.
+    traces_sample_rate=1.0
+)
 
 
 app = Flask(__name__)
@@ -123,28 +124,30 @@ def batch_page():
    return render_template("batch.html")
 
 
-batch_running = Event()
+batch_running = Value('b', False)
 
 
 @app.route('/batch-status')
 def batch_status():
-    global batch_running
-    return jsonify({'status': 'running' if batch_running.is_set() else 'idle'})
-
+    with batch_running.get_lock():
+        if batch_running.value:
+            return jsonify({'status': 'running'})
+        else:
+            return jsonify({'status': 'idle'})
 
 def __run_job_as_thread(thread_name, job):
-    global batch_running
-    if batch_running.is_set():
-        raise Exception('batch job already running')
     
     def thread_target():
-        global batch_running
-        batch_running.set()
+        with batch_running.get_lock():
+            if batch_running.value:
+                raise Exception('batch job already running')
+            batch_running.value = True
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(job())
         loop.close()
-        batch_running.clear()
+        with batch_running.get_lock():
+            batch_running.value = False
 
     job_thread = Thread(name=thread_name, target=thread_target)
     job_thread.start()
@@ -159,9 +162,9 @@ def new_batch_job():
     log_msg('POST request to /new-batch-job endpoint')
     __log_args(post)
 
-    global batch_running
-    if batch_running.is_set():
-        return jsonify({'status': 'error', 'message': 'batch job already running'}), 400
+    with batch_running.get_lock():
+        if batch_running.value:
+            return jsonify({'status': 'error', 'message': 'batch job already running'}), 400
     
     required_args = ['job_type', 'data_source']
     if post is None or not all(arg in post for arg in required_args):
