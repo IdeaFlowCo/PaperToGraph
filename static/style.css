@@ -407,6 +407,10 @@ textarea {
     border-radius: .25rem;
 }
 
+.extra-job-controls .model-selection {
+    margin-bottom: 1em;
+}
+
 .override-check {
     margin-bottom: 0.75em;
 }

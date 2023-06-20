@@ -38,14 +38,6 @@
         <span class="label">Data source</span>
         <input id="data-source" class="text-input"/>
 
-        <span class="label">GPT model for job run</span>
-        <div class="model-selection">
-            <input type="radio" id="model1" name="model-select" value="gpt-3.5-turbo" checked>
-            <label for="model1">GPT 3.5</label><br>
-            <input type="radio" id="model2" name="model-select" value="gpt-4">
-            <label for="model2">GPT 4</label><br>
-        </div>
-        
         <span class="label">Type of job to run</span>
         <div class="model-selection">
             <input type="radio" id="jtype1" name="job-type" value="parse">
@@ -55,6 +47,14 @@
         </div>
 
         <div id="parse-job-controls" class="extra-job-controls" style="display: none;">
+            <span class="label">GPT model for job run</span>
+            <div class="model-selection">
+                <input type="radio" id="model1" name="model-select" value="gpt-3.5-turbo" checked>
+                <label for="model1">GPT 3.5</label><br>
+                <input type="radio" id="model2" name="model-select" value="gpt-4">
+                <label for="model2">GPT 4</label><br>
+            </div>
+            
             <div class="override-check">
                 <input type="checkbox" id="dry-run">
                 <label for="dry-run">Dry run</label>
