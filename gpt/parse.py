@@ -20,6 +20,7 @@ PARSE_SM_TEMPLATE = (
     "Extract the named entities and their relationships from the text provided. "
     "The output should be formatted as a JSON object. Each key in the output object should be the name of an extracted entity. "
     "Each value should be an object with a key for each relationship and values representing the target of the relationship. "
+    "Be sure to separate all comma separated entities that may occur in results into separate items in a list. "
     "\n\n"
     "For example, if provided the following input:"
     "\n```\n"
@@ -41,7 +42,7 @@ SAMPLE_PARSE_INPUT = (
 SAMPLE_PARSE_OUTPUT = (
     "{"
     "\n  \"Tom Currier\": {"
-    "\n    \"studied at\": \"Stanford, Harvard\","
+    "\n    \"studied at\": [\"Stanford\", \"Harvard\"],"
     "\n    \"winner of\": \"Thiel Fellowship\""
     "\n  }"
     "\n}"
