@@ -17,17 +17,17 @@ import utils
 from utils import log_msg
 
 
-sentry_sdk.init(
-    dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
-    integrations=[
-        FlaskIntegration(),
-    ],
+# sentry_sdk.init(
+#     dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
+#     integrations=[
+#         FlaskIntegration(),
+#     ],
 
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for performance monitoring.
-    # Sentry recommends adjusting this value in production.
-    traces_sample_rate=1.0
-)
+#     # Set traces_sample_rate to 1.0 to capture 100%
+#     # of transactions for performance monitoring.
+#     # Sentry recommends adjusting this value in production.
+#     traces_sample_rate=1.0
+# )
 
 
 app = Flask(__name__)
@@ -170,7 +170,7 @@ def new_batch_job():
     if post['job_type'] == 'parse':
         thread_name = utils.BATCH_PARSE_THREAD_NAME
         utils.setup_logger(name=thread_name, log_file=BATCH_JOB_LOG_FILE)
-        gpt_model = utils.sanitize_gpt_model_choice(post.get('gpt_model', 'any'))
+        gpt_model = utils.sanitize_gpt_model_choice(post.get('model', 'any'))
         dry_run = post.get('dry_run', False)
         parse_job = batch_parse_job.BatchParseJob(gpt_model=gpt_model, dry_run=dry_run)
 
