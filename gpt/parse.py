@@ -57,13 +57,41 @@ PARSE_SYSTEM_MESSAGE = {
     }
 
 
+def get_output_reservation(model):
+    '''
+    Return the maximum number of tokens to reserve for the response from a given model.
+    '''
+    # Note: response size should not scale linearly with max context size because the whole point is that we're
+    # extracting/refining data with this query.
+    # That said, there's a somewhat high "floor" here because JSON ouptput consumes a lot of tokens for
+    # structural characters like {} and ""
+    if model == 'gpt-3.5-turbo-16k':
+        # Max context size: 16,384 tokens
+        return 3000
+    elif model == 'gpt-4':
+        # Max context size: 8,192 tokens
+        return 2000
+    else:
+        # Asssuming GPT-3.5-turbo
+        # Max context size: 4,096 tokens
+        return 1600
+
+
+def get_timeout_limit(model):
+    if model == 'gpt-3.5-turbo-16k':
+        return 75
+    elif model == 'gpt-4':
+        return 75
+    else:
+        return 60
+
 
 async def async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False, prompt_override=None):
     '''
     Retrieve parse response from GPT for given block of text.
     '''
-    max_tokens = 2000 if model == 'gpt-4' else 1600
-    timeout = 90 if model == 'gpt-4' else 60
+    max_tokens = get_output_reservation(model)
+    timeout = get_timeout_limit(model)
 
     if prompt_override:
         system_message = {

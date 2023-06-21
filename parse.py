@@ -23,21 +23,22 @@ def get_text_size_limit(model):
     # Can see max context size for different models here: https://platform.openai.com/docs/models/overview
     if model == 'gpt-3.5-turbo-16k':
         max_context_tokens = 16384
-    if model == 'gpt-4':
-        # Max context size: 8,192 tokens
+    elif model == 'gpt-4':
         max_context_tokens = 8192
     else:
-        # Asssuming GPT-3.5-turbo
         max_context_tokens = 4096
 
-    # This margin of error is based off empirical testing.
-    margin_of_error = 1000
+    output_reservation = gpt.parse.get_output_reservation(model)
 
-    # Each token is about 3-4 characters for freeform text (e.g. the text to be parsed, which is the longest part of our requests).
-    # Round down to 3 to be safe.
-    chars_per_token = 3
+    # Leave ourselves a margin of error based off empirical testing.
+    margin_of_error = 250
 
-    return (max_context_tokens - parse_prompt_tokens - margin_of_error) * chars_per_token
+    # Each token is about 3-4 characters for freeform text (e.g. the text to be parsed, which is what we're sizing here).
+    chars_per_token = 3.5
+    
+    tokens_for_input = max_context_tokens - parse_prompt_tokens - output_reservation - margin_of_error
+
+    return int(tokens_for_input * chars_per_token)
 
 
 async def parse_with_gpt(text: str, model="gpt-3.5-turbo"):
@@ -45,6 +46,7 @@ async def parse_with_gpt(text: str, model="gpt-3.5-turbo"):
     Splits provided text into smaller pieces and parses each piece in parallel using GPT.
     '''
     text_limit = get_text_size_limit(model)
+    log_msg(f'Splitting input text into chunks of {text_limit} characters.')
     text_chunks = split_to_size(text, limit=text_limit)
     # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
     # this is hopefully acceptable behavior.
@@ -64,6 +66,7 @@ async def parse_with_gpt_multitask(text: str, model="gpt-3.5-turbo"):
     Splits provided text into smaller pieces and parses each piece in parallel using GPT, yielding results as they come in.
     '''
     text_limit = get_text_size_limit(model)
+    log_msg(f'Splitting input text into chunks of {text_limit} characters.')
     text_chunks = split_to_size(text, limit=text_limit)
     # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
     # this is hopefully acceptable behavior.
@@ -86,6 +89,7 @@ async def async_parse_with_heartbeat(text: str, model="gpt-3.5-turbo", prompt_ov
     log_msg('Sending connection heartbeat')
     yield ' '
     text_limit = get_text_size_limit(model)
+    log_msg(f'Splitting input text into chunks of {text_limit} characters.')
     text_chunks = split_to_size(text, limit=text_limit)
     # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
     # this is hopefully acceptable behavior.

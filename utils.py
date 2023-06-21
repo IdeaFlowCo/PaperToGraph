@@ -17,20 +17,24 @@ def get_logger():
     return logging.getLogger(logger_name)
 
 
-def log_msg(msg:str):
+def log_msg(msg:str, level=logging.INFO):
     '''
     Log provided message in a standardized way.
     '''
-    return get_logger().info(msg)
+    return get_logger().log(level, msg)
 
 
-def setup_logger(name=None, log_file=None):
+def log_debug(msg:str):
+    return log_msg(msg, level=logging.DEBUG)
+
+
+def setup_logger(name=None, log_file=None, level=logging.INFO):
     logger = logging.getLogger(name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(level)
     formatter = logging.Formatter('[%(asctime)s][%(name)s][%(levelname)s] %(message)s')
 
     stdout_handler = logging.StreamHandler(sys.stdout)
-    stdout_handler.setLevel(logging.INFO)
+    stdout_handler.setLevel(level)
     stdout_handler.setFormatter(formatter)
     logger.addHandler(stdout_handler)
 
@@ -39,7 +43,7 @@ def setup_logger(name=None, log_file=None):
             # Make intermediate directories if necessary
             os.makedirs(os.path.dirname(log_file), exist_ok=True)
         file_handler = logging.FileHandler(log_file)
-        file_handler.setLevel(logging.INFO)
+        file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 

@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import json
+import logging
 import os
 import time
 from threading import Thread
@@ -18,17 +19,17 @@ import utils
 from utils import log_msg
 
 
-# sentry_sdk.init(
-#     dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
-#     integrations=[
-#         FlaskIntegration(),
-#     ],
+sentry_sdk.init(
+    dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
+    integrations=[
+        FlaskIntegration(),
+    ],
 
-#     # Set traces_sample_rate to 1.0 to capture 100%
-#     # of transactions for performance monitoring.
-#     # Sentry recommends adjusting this value in production.
-#     traces_sample_rate=1.0
-# )
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # Sentry recommends adjusting this value in production.
+    traces_sample_rate=1.0
+)
 
 
 app = Flask(__name__)
@@ -132,8 +133,8 @@ def __is_batch_running():
     current_time = time.time()
     last_modified = os.path.getmtime(BATCH_JOB_LOG_FILE)
     secs_since_last_modified = current_time - last_modified
-    # If the file was modified less than 16 seconds ago, assume the batch job is still running
-    # 16 seconds because the batch job logs every 15 seconds
+    # If the file was modified less than 60 seconds ago, assume the batch job is still running.
+    # 60 seconds because the batch job should log at least once a minute.
     return secs_since_last_modified < 16
 
 
@@ -243,10 +244,10 @@ if __name__ == '__main__':
 
     __handle_neo_credential_override(args)
 
-    utils.setup_logger()
-
     log_msg('Starting server...')
     if args.local:
+        utils.setup_logger(level=logging.DEBUG)
         app.run(host="127.0.0.1", port=5001, debug=True)
     else:
+        utils.setup_logger()
         app.run_server(debug=True, use_reloader=False )

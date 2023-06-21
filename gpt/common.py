@@ -11,7 +11,7 @@ import openai
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
-from utils import log_msg
+from utils import log_msg, log_debug
 
 
 def clean_json(response):
@@ -36,7 +36,7 @@ def clean_json(response):
                 if not cleaned_value:
                     continue
                 value = cleaned_value
-            if isinstance(value, list):
+            elif isinstance(value, list):
                 # Do nothing to clean list values for now
                 pass
             elif isinstance(value, str):
@@ -45,6 +45,7 @@ def clean_json(response):
                     continue
             else:
                 # We don't know how to handle other kinds of values, so skip them
+                log_debug(f'Unexpected value type for key "{key}": {type(value)}')
                 continue
             cleaned[key] = value
         cleaned = json.dumps(cleaned, indent=2)
@@ -139,11 +140,12 @@ async def async_fetch_from_openai(
 
     result = result["choices"][0]["message"]["content"].strip()
     log_msg(f'Received {log_label.lower()} response from OpenAI')
-    # log_msg(result)
+    log_debug(f'Response data: \n{result}')
     if result == skip_msg:
         log_msg(f'OpenAI returned designated skip message "{skip_msg}". Returning empty string for this block.')
         return ''
     result = clean_json(result)
+    log_debug(f'Cleaned response data: \n{result}')
     if result is None:
         if should_retry:
             log_msg("Doesn't look like GPT gave us JSON. Trying again one more time...")
