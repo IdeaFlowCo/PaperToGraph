@@ -92,8 +92,6 @@ def make_and_run_parse_job(job_args):
     output_uri = job_args.get('output_uri', 's3://paper2graph-parse-results')
     work_fn = lambda: parse_job.run(data_source, output_uri)
 
-    # Clear log file before starting
-    open(LOG_FILE, 'w').close()
     utils.setup_logger(name=thread_name, log_file=LOG_FILE)
     
     batch_job_thread = BatchJobThread(thread_name, work_fn)
@@ -113,8 +111,6 @@ def make_and_run_save_job(neo_config, job_args):
 
     work_fn = lambda: batch_save_job.save_to_neo4j(data_source, neo_config)
 
-    # Clear log file before starting
-    open(LOG_FILE, 'w').close()
     utils.setup_logger(name=thread_name, log_file=LOG_FILE)
 
     batch_job_thread = BatchJobThread(thread_name, work_fn)

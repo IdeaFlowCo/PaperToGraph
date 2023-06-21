@@ -39,15 +39,21 @@ def setup_logger(name=None, log_file=None, level=logging.INFO):
     logger.addHandler(stdout_handler)
 
     if log_file:
-        if os.path.dirname(log_file):
-            # Make intermediate directories if necessary
-            os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        setup_log_file(log_file)
         file_handler = logging.FileHandler(log_file)
         file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
     return logger
+
+
+def setup_log_file(log_file):
+    # Make intermediate directories if necessary
+    if os.path.dirname(log_file):
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+    # Clear any previous log contents
+    open(log_file, 'w').close()
 
 
 def add_neo_credential_override_args(parser):
