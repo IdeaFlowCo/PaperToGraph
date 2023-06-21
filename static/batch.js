@@ -5,6 +5,7 @@
     const parseJobControls = document.querySelector('#parse-job-controls');
     const saveJobControls = document.querySelector('#save-job-controls');
     const submitJobButton = document.querySelector('#btn-submit-job');
+    const cancelJobButton = document.querySelector('#btn-cancel-job');
 
     const handleJobTypeChange = () => {
         const selectedJobType = document.querySelector('input[name="job-type"]:checked').value;
@@ -79,13 +80,14 @@
     }
 
     const jobLogs = document.querySelector('#job-logs');
+    let jobLogEventStream = null;
     const streamJobLogs = () => {
-        const source = new EventSource('batch-log');
-        source.onmessage = (event) => {
+        jobLogEventStream = new EventSource('batch-log');
+        jobLogEventStream.onmessage = (event) => {
             console.log(event);
             const eventData = event.data.trim();
             if (eventData === 'done') {
-                source.close();
+                jobLogEventStream.close();
                 return;
             }
             if (eventData != 'nodata') {
@@ -124,6 +126,7 @@
             if (response.ok) {
                 successMsg.classList.remove('hidden');
                 jobInfo.classList.remove('hidden');
+                cancelJobButton.disabled = false;
                 streamJobLogs();
             } else {
                 inputErrorMsg.classList.remove('hidden');
@@ -138,6 +141,45 @@
         }
     };
     submitJobButton.addEventListener('click', handleSubmitClick);
+
+
+    const handleCancelClick = async () => {
+        // Disable cancel button
+        cancelJobButton.disabled = true;
+
+        const response = await fetch('cancel-batch-job', {
+            method: 'POST',
+            mode: 'cors',
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+
+        try {
+            const parsedResponse = await response.json();
+            console.log('Received cancel response:', parsedResponse);
+
+            if (response.ok) {
+                // successMsg.classList.remove('hidden');
+                jobInfo.classList.add('hidden');
+                if (jobLogEventStream) {
+                    jobLogEventStream.close();
+                }
+                jobLogEventStream = null;
+                // streamJobLogs();
+            } else {
+                inputErrorMsg.classList.remove('hidden');
+                // Re-enable submit button so user can try again
+                submitJobButton.disabled = false;
+            }
+        } catch (e) {
+            console.error(e);
+            genericErrorMsg.classList.remove('hidden');
+            // Re-enable submit button so user can try again
+            submitJobButton.disabled = false;
+        }
+    }
+    cancelJobButton.addEventListener('click', handleCancelClick);
 
     const newJobControls = document.querySelector('#new-job-controls');
     const jobInfo = document.querySelector('#job-info');
@@ -160,7 +202,9 @@
             if (parsedResponse['status'] === 'running') {
                 // Hide spinner, show job info
                 jobStatusSpinner.classList.add('hidden');
+                newJobControls.classList.remove('hidden');
                 jobInfo.classList.remove('hidden');
+                cancelJobButton.disabled = false;
                 streamJobLogs();
             } else {
                 // Hide spinner, show new job controls
