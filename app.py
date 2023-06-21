@@ -147,8 +147,6 @@ def batch_status():
 
 def __run_job_as_thread(thread_name, job):    
     def thread_target():
-        if __is_batch_running():
-            raise Exception('batch job already running')
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(job())

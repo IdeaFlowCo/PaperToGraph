@@ -76,10 +76,11 @@ async def async_fetch_from_openai(
             )
     except openai.error.RateLimitError:
         log_msg('Rate limit error from OpenAI')
-        # Wait half a second and try again
-        # This is common enough and the exception triggers fast enough that it
-        # shouldn't "use up" a retry in our logic.
-        await asyncio.sleep(0.5)
+        # Worst case rate limit is 60 requests-per-minute, 60,000 tokens-per-minute, per rate limit docs.
+        # https://platform.openai.com/docs/guides/rate-limits/overview
+        # Max tokens per request is ~8000, meaning we can send ~7.5 requests/minute, so we'll wait 8 seconds and try again.
+        await asyncio.sleep(8)
+        # This is common enough and the exception triggers fast enough that it shouldn't "use up" a retry in our logic.
         return await async_fetch_from_openai(
             messages,
             log_label,
@@ -88,6 +89,13 @@ async def async_fetch_from_openai(
             skip_on_error=skip_on_error, 
             should_retry=should_retry
         )
+    except openai.error.InvalidRequestError as err:
+        log_msg(f'Invalid request error from OpenAI: {err}')
+        # This is probably an issue with context size, which we're not handling yet, so we'll just skip this chunk because
+        # retrying won't help.
+        # In the future we'll let this bubble up so calling code can split the request into smaller chunks and try again.
+        log_msg('Skipping this chunk.')
+        return ''
     except TimeoutError:
         if should_retry:
             log_msg(f'{log_label} request timeout. Trying again one more time...')

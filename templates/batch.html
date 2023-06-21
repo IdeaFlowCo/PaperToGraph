@@ -51,6 +51,8 @@
             <div class="model-selection">
                 <input type="radio" id="model1" name="model-select" value="gpt-3.5-turbo" checked>
                 <label for="model1">GPT 3.5</label><br>
+                <input type="radio" id="model3" name="model-select" value="gpt-3.5-turbo-16k">
+                <label for="model3">GPT 3.5: 16k context</label><br>
                 <input type="radio" id="model2" name="model-select" value="gpt-4">
                 <label for="model2">GPT 4</label><br>
             </div>
@@ -72,7 +74,7 @@
         <div id="save-job-controls" class="extra-job-controls" style="display: none;">
             <div class="override-check">
                 <input type="checkbox" id="override-neo-uri">
-                <label for="override-neo-uri">Specify Neo4j instance</label>
+                <label for="override-neo-uri">Override Neo4j instance</label>
             </div>
             <div id="override-neo-uri-container" class="override-input" style="display: none;">
                 <span class="label">Neo4j connection URI</span>
@@ -81,7 +83,7 @@
 
             <div class="override-check">
                 <input type="checkbox" id="override-neo-user">
-                <label for="override-neo-user">Specify Neo4j username</label>
+                <label for="override-neo-user">Override Neo4j username</label>
             </div>
             <div id="override-neo-user-container" class="override-input" style="display: none;">
                 <span class="label">Neo4j username</span>
@@ -90,7 +92,7 @@
 
             <div class="override-check">
                 <input type="checkbox" id="override-neo-pass">
-                <label for="override-neo-pass">Specify Neo4j password</label>
+                <label for="override-neo-pass">Override Neo4j password</label>
             </div>
             <div id="override-neo-pass-container" class="override-input" style="display: none;">
                 <span class="label">Neo4j password</span>

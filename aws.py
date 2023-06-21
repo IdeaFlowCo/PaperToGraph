@@ -79,10 +79,19 @@ def create_output_dir_for_job(data_source, output_uri, dry_run=False):
     '''
     Create a subdirectory for output of this job at the given path and return the key for the new subdirectory.
     '''
+    bucket, output_uri_path = parse_s3_uri(output_uri)
+
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
     _, inputpath = parse_s3_uri(data_source)
-    input_dir_name = os.path.basename(inputpath)
-    bucket, path = parse_s3_uri(output_uri)
-    output_path = f'{path}/{datetime.now().timestamp()}-{input_dir_name}-output/'.lstrip('/') # If path is empty, trim leading slash
+    dir_name, base_name = os.path.split(inputpath)
+    # If our data source is a directory, base_name will be empty and we need to split again to get the directory name
+    input_dir_name = base_name if base_name else os.path.basename(dir_name)
+
+    # Assemble the full path for the output directory we're creating
+    output_path = f'{output_uri_path}/{timestamp}-{input_dir_name}-output/'
+    # If output_uri_path is empty (writing to bucket base), we need to trim the leading slash
+    output_path = output_path.lstrip('/')
 
     if dry_run:
         log_msg(f'Would have created a subdirectory for job output at s3://{bucket}/{output_path}')

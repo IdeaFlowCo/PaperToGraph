@@ -9,7 +9,35 @@ from text import is_text_oversized, split_to_size
 
 
 def get_text_size_limit(model):
-    return 12000 if model == 'gpt-4' else 8000
+    '''
+    Returns desired length of text to be parsed, in number of characters, based on model to be used.
+    '''
+    # Different models have different max context sizes, where "context size" is the total number of tokens
+    # used in the completion request, inclduding all of: the prompt in the system message, the text to be parsed,
+    # and the reesrvation for the output.
+    # Can check token length using https://platform.openai.com/tokenizer
+
+    # The default parse prompt sent as system message is 243 tokens; round up to 250 to be safe.
+    parse_prompt_tokens = 250
+    
+    # Can see max context size for different models here: https://platform.openai.com/docs/models/overview
+    if model == 'gpt-3.5-turbo-16k':
+        max_context_tokens = 16384
+    if model == 'gpt-4':
+        # Max context size: 8,192 tokens
+        max_context_tokens = 8192
+    else:
+        # Asssuming GPT-3.5-turbo
+        max_context_tokens = 4096
+
+    # This margin of error is based off empirical testing.
+    margin_of_error = 1000
+
+    # Each token is about 3-4 characters for freeform text (e.g. the text to be parsed, which is the longest part of our requests).
+    # Round down to 3 to be safe.
+    chars_per_token = 3
+
+    return (max_context_tokens - parse_prompt_tokens - margin_of_error) * chars_per_token
 
 
 async def parse_with_gpt(text: str, model="gpt-3.5-turbo"):
@@ -54,6 +82,7 @@ async def async_parse_with_heartbeat(text: str, model="gpt-3.5-turbo", prompt_ov
     '''
     Parser structured as generator that periodically yields blank characters to keep HTTP connection alive.
     '''
+    log_msg(f'Parsing text using GPT model {model}')
     log_msg('Sending connection heartbeat')
     yield ' '
     text_limit = get_text_size_limit(model)
