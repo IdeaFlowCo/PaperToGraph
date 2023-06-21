@@ -2,6 +2,7 @@ import argparse
 import asyncio
 
 import aws
+import json
 import save
 import utils
 from utils import log_msg
@@ -28,7 +29,18 @@ async def __fetch_input_file(file_uri):
 async def __process_file(file_uri, neo_config):
     log_msg(f'Processing file {file_uri}')
 
-    input_file_name, input_data = await __fetch_input_file(file_uri)
+    try:
+        input_file_name, input_data = await __fetch_input_file(file_uri)
+    except Exception as err:
+        log_msg(f'Exception raised when fetching input file. Swallowing to proceed with rest of job.')
+        log_msg(f'Exception: {err}')
+        return
+
+    try:
+        json.loads(input_data)
+    except json.decoder.JSONDecodeError:
+        log_msg(f'File contents at {file_uri} not valid JSON. Skipping.')
+        return
 
     log_msg(f'Saving data from {input_file_name} to Neo4j')
     try:
