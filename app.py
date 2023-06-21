@@ -162,27 +162,32 @@ def cancel_batch_job():
     return jsonify({'status': 'success', 'message': 'Batch job cancel requested'}), 200
 
 
+async def batch_log_response_generator(file_path):
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        # Yield last 20 lines as context
+        for line in lines[-20:]:
+            yield f'data:{line}\n\n'
+        # Watch for new lines and yield them as they are added
+        while batch.is_batch_job_running():
+            current_position = file.tell()
+            line = file.readline().rstrip()
+            if line:
+                yield f'data:{line}\n\n'
+                continue
+            else:
+                yield f'data:nodata\n\n'
+                file.seek(current_position)
+                await asyncio.sleep(0.5)
+        yield f'data:done\n\n'
+
+
 @app.route('/batch-log', methods=["GET"])
 def batch_log():
     def response_generator(file_path):
         try:
-            with open(file_path, 'r') as file:
-                lines = file.readlines()
-                # Yield last 20 lines as context
-                for line in lines[-20:]:
-                    yield f'data:{line}\n\n'
-                # Watch for new lines and yield them as they are added
-                while batch.is_batch_job_running():
-                    current_position = file.tell()
-                    line = file.readline().rstrip()
-                    if line:
-                        yield f'data:{line}\n\n'
-                        continue
-                    else:
-                        yield f'data:nodata\n\n'
-                        file.seek(current_position)
-                        time.sleep(0.25)
-                yield f'data:done\n\n'
+            sync_iter = iter_over_async(batch_log_response_generator(file_path))
+            yield from sync_iter
         except GeneratorExit:
             log_msg('Client connection closed')
 
