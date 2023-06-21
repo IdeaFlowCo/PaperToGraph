@@ -36,10 +36,16 @@ def clean_json(response):
                 if not cleaned_value:
                     continue
                 value = cleaned_value
-            else:
+            if isinstance(value, list):
+                # Do nothing to clean list values for now
+                pass
+            elif isinstance(value, str):
                 # Sometimes we get really long string pairs that are more trouble than they are informative
                 if len(key) + len(value) > 200:
                     continue
+            else:
+                # We don't know how to handle other kinds of values, so skip them
+                continue
             cleaned[key] = value
         cleaned = json.dumps(cleaned, indent=2)
         # log_msg(f'Cleaned up response JSON: \n{cleaned}')
@@ -50,6 +56,10 @@ def clean_json(response):
             # Response isn't valid JSON but may be close enough that it can still be used, so we'll just return it as-is
             return response
         return None
+    except Exception as err:
+        log_msg(f'Error while attempting to clean response JSON: {err}')
+        log_msg(f'Response was valid JSON, though, so returning it unchanged.')
+        return response
 
 
 async def async_fetch_from_openai(
