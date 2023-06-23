@@ -1,14 +1,11 @@
 import argparse
 import asyncio
 import json
-import logging
-import os
-import time
 
 import sentry_sdk
+from sentry_sdk.integrations.quart import QuartIntegration
 
-from flask import Flask, request, jsonify, render_template, Response
-from sentry_sdk.integrations.flask import FlaskIntegration
+from quart import Quart, request, jsonify, render_template, Response, make_response
 
 import batch
 import parse
@@ -17,20 +14,20 @@ import utils
 from utils import log_msg
 
 
-# sentry_sdk.init(
-#     dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
-#     integrations=[
-#         FlaskIntegration(),
-#     ],
+sentry_sdk.init(
+    dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
+    integrations=[
+        QuartIntegration(),
+    ],
 
-#     # Set traces_sample_rate to 1.0 to capture 100%
-#     # of transactions for performance monitoring.
-#     # Sentry recommends adjusting this value in production.
-#     traces_sample_rate=1.0
-# )
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # Sentry recommends adjusting this value in production.
+    traces_sample_rate=1.0
+)
 
 
-app = Flask(__name__)
+app = Quart(__name__)
 app.config.update(ENV='development')
 app.config.update(SECRET_KEY='878as7d8f7997dfaewrwv8asdf8)(dS&A&*d78(*&ASD08A')
 
@@ -45,29 +42,12 @@ def __log_args(args):
     log_msg(f'Request arguments: \n{to_log}')
 
 
-def iter_over_async(ait):
-    '''
-    Make an async generator behave as if it's syncronous.
-    
-    Need this for Flask streaming response.
-    '''
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    ait = ait.__aiter__()
-    async def get_next():
-        try: obj = await ait.__anext__(); return False, obj
-        except StopAsyncIteration: return True, None
-    while True:
-        done, obj = loop.run_until_complete(get_next())
-        if done: break
-        yield obj
-
-
 def __create_parse_response(message:str, model:str, prompt_override=None):
     model = utils.sanitize_gpt_model_choice(model)
-    iter = iter_over_async(parse.async_parse_with_heartbeat(message, model=model, prompt_override=prompt_override))
-    return app.response_class(iter, mimetype='application/json')
+    return app.response_class(
+        parse.async_parse_with_heartbeat(message, model=model, prompt_override=prompt_override),
+        mimetype='application/json'
+    )
 
 
 def __wrong_payload_response(message="wrong payload"):
@@ -75,18 +55,18 @@ def __wrong_payload_response(message="wrong payload"):
 
 
 @app.route('/')
-def home():
-   return render_template("index.html")
+async def home():
+   return await render_template("index.html")
 
 
 @app.route('/extractor')
-def extractor():
-   return render_template("index.html")
+async def extractor():
+   return await render_template("index.html")
 
 
 @app.route("/raw-parse", methods=["POST"])
-def raw_parse():
-    post = request.get_json()
+async def raw_parse():
+    post = await request.get_json()
     log_msg('POST request to /raw-parse endpoint')
     __log_args(post)
     
@@ -97,8 +77,8 @@ def raw_parse():
 
 
 @app.route("/save-to-neo", methods=["POST"])
-def save_to_neo():
-    post = request.get_json()
+async def save_to_neo():
+    post= await request.get_json()
     log_msg('POST request to /save-to-neo endpoint')
     __log_args(post)
     
@@ -119,12 +99,12 @@ def save_to_neo():
 
 
 @app.route('/batch')
-def batch_page():
-   return render_template("batch.html")
+async def batch_page():
+   return await render_template("batch.html")
 
 
 @app.route('/batch-status')
-def batch_status():
+async def batch_status():
     if batch.is_batch_job_running():
         return jsonify({'status': 'running'})
     else:
@@ -132,8 +112,8 @@ def batch_status():
 
 
 @app.route('/new-batch-job', methods=["POST"])
-def new_batch_job():
-    post = request.get_json()
+async def new_batch_job():
+    post = await request.get_json()
     log_msg('POST request to /new-batch-job endpoint')
     __log_args(post)
 
@@ -156,7 +136,7 @@ def new_batch_job():
 
 
 @app.route('/cancel-batch-job', methods=["POST"])
-def cancel_batch_job():
+async def cancel_batch_job():
     log_msg('POST request to /cancel-batch-job endpoint')
     batch.cancel_batch_job()
     return jsonify({'status': 'success', 'message': 'Batch job cancel requested'}), 200
@@ -183,15 +163,36 @@ async def batch_log_response_generator(file_path):
 
 
 @app.route('/batch-log', methods=["GET"])
-def batch_log():
-    def response_generator(file_path):
-        try:
-            sync_iter = iter_over_async(batch_log_response_generator(file_path))
-            yield from sync_iter
-        except GeneratorExit:
-            log_msg('Client connection closed')
+async def batch_log():
+    async def tail_log(file_path):
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+            # Yield last 20 lines as context
+            for line in lines[-20:]:
+                yield f'data:{line}\n\n'
+            # Watch for new lines and yield them as they are added
+            while batch.is_batch_job_running():
+                current_position = file.tell()
+                line = file.readline().rstrip()
+                if line:
+                    yield f'data:{line}\n\n'
+                    continue
+                else:
+                    yield f'data:nodata\n\n'
+                    file.seek(current_position)
+                    await asyncio.sleep(0.5)
+            yield f'data:done\n\n'
 
-    return Response(response_generator(batch.LOG_FILE), mimetype= 'text/event-stream')
+    response = await make_response(
+        tail_log(batch.LOG_FILE),
+         {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Transfer-Encoding': 'chunked',
+        },
+    )
+    response.timeout = None
+    return response
 
 
 def __handle_neo_credential_override(args):

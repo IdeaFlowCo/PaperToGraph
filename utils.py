@@ -33,6 +33,13 @@ def setup_logger(name=None, log_file=None, level=logging.INFO):
     logger.setLevel(level)
     formatter = logging.Formatter('[%(asctime)s][%(name)s][%(levelname)s] %(message)s')
 
+    if len(logger.handlers) > 0:
+        # Logger already exists/has handlers, so don't add any more
+        # We'll still run setup_log_file to clear the log file if necessary
+        if log_file:
+            setup_log_file(log_file)
+        return logger
+
     stdout_handler = logging.StreamHandler(sys.stdout)
     stdout_handler.setLevel(level)
     stdout_handler.setFormatter(formatter)
@@ -44,6 +51,8 @@ def setup_logger(name=None, log_file=None, level=logging.INFO):
         file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
+
+    logger.propagate = False
 
     return logger
 
