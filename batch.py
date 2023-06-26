@@ -99,7 +99,7 @@ def make_and_run_parse_job(job_args):
     batch_job_thread.start()
 
 
-def make_and_run_save_job(neo_config, job_args):
+def make_and_run_save_job(job_args, neo_config):
     thread_name = utils.BATCH_SAVE_THREAD_NAME
     
     data_source = job_args['data_source']

@@ -10,11 +10,12 @@ from utils import log_msg
 
 
 async def __find_input_files(data_source):
-    files = aws.get_objects_at_s3_uri(data_source)
+    log_msg(f'Finding input files at {data_source}')
+    files = aws.get_objects_by_folder_at_s3_uri(data_source)
     if not files:
       raise Exception(f'No files found at {data_source}')
 
-    log_msg(f'Found {len(files)} files to process')
+    log_msg(f'Found {len(files)} directories to process')
     log_msg(files)
     return files
 
@@ -26,7 +27,19 @@ async def __fetch_input_file(file_uri):
     return file_name, data
 
 
-async def __process_file(file_uri, neo_config):
+async def __process_folder(folder_files, neo_config):
+    source_text_uri = None
+    source_text_uris = list(filter(lambda uri: uri.endswith('/source.txt'), folder_files))
+    if len(source_text_uris) == 1:
+        source_text_uri = source_text_uris[0]
+        log_msg(f'Found source text file {source_text_uri}')
+        folder_files.remove(source_text_uri)
+
+    for file_uri in folder_files:
+        await __process_file(file_uri, neo_config, source_text_uri=source_text_uri)
+
+
+async def __process_file(file_uri, neo_config, source_text_uri=None):
     log_msg(f'Processing file {file_uri}')
 
     try:
@@ -43,17 +56,22 @@ async def __process_file(file_uri, neo_config):
         return
 
     log_msg(f'Saving data from {input_file_name} to Neo4j')
+    input_uri = source_text_uri if source_text_uri else file_uri
+    log_msg(f'Specifying input source as {input_uri}')
     try:
-        save.save_json_data(input_data, saved_input_uri=file_uri, neo_config=neo_config)
+        save.save_json_data(input_data, saved_input_uri=input_uri, neo_config=neo_config)
     except Exception as err:
         log_msg('Exception raised when saving data. Swallowing to proceed with rest of job.')
         log_msg(f'Exception: {err}')
     
 
 async def save_to_neo4j(data_source, neo_config):
-    input_files = await __find_input_files(data_source)
-    for file_uri in input_files:
-        await __process_file(file_uri, neo_config)
+    log_msg(f'Running batch save job for {data_source}')
+    input_files_by_folder = await __find_input_files(data_source)
+    for folder_key in input_files_by_folder:
+        folder_files = input_files_by_folder[folder_key]
+        log_msg(f'Processing {len(folder_files)} files from folder {folder_key}')
+        await __process_folder(folder_files, neo_config)
 
 
 if __name__ == "__main__":

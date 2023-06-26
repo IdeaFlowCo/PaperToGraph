@@ -52,7 +52,7 @@ def create_or_update_entity(driver, name, source, timestamp):
             created_at=timestamp,
         )
         # TODO: Check result for any extra logging or error handling logic
-        log_msg('Entity created or updated')
+        log_msg(f'Entity for "{name}" created or updated')
 
 
 # Function to create a named relationship between two entities if it doesn't exist
@@ -80,7 +80,7 @@ def create_or_update_relationships(driver, ent1_name, relationship_name, ent2_na
             created_at=timestamp,
         )
         # TODO: Check result for any extra logging or error handling logic
-        log_msg('Relationship created or updated')
+        log_msg(f'Relationship "{relationship_name}" created or updated between "{ent1_name}" and "{ent2_name}"')
 
 
 def __get_neo4j_driver(neo_config):
