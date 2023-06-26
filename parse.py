@@ -75,7 +75,12 @@ async def parse_with_gpt_multitask(text: str, model="gpt-3.5-turbo", prompt_over
     # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
     # this is hopefully acceptable behavior.
     # The benefit is that the total parsing is much more resilient with some fault tolerance.
-    parse_work_fn = lambda chunk: gpt.async_fetch_parse(chunk, model=model, skip_on_error=True, prompt_override=prompt_override)
+    parse_work_fn = lambda chunk: gpt.async_fetch_parse(
+        chunk, 
+        model=model, 
+        skip_on_error=True, 
+        prompt_override=prompt_override,
+        return_source=True)
 
     async for result in tasks.create_and_run_tasks(
         task_inputs=text_chunks, 

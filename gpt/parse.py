@@ -86,7 +86,7 @@ def get_timeout_limit(model):
         return 60
 
 
-async def async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False, prompt_override=None):
+async def async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False, prompt_override=None, return_source=False):
     '''
     Retrieve parse response from GPT for given block of text.
     '''
@@ -106,7 +106,7 @@ async def async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False
         {"role": "user", "content": text}
     ]
 
-    return await async_fetch_from_openai(
+    parse_result = await async_fetch_from_openai(
         messages,
         log_label='Parse',
         model=model,
@@ -116,6 +116,10 @@ async def async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False
         skip_msg=NO_ENTITIES_MARKER
     )
 
+    if return_source:
+        return text, parse_result
+    else:
+        return parse_result
 
 
 

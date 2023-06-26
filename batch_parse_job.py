@@ -43,25 +43,31 @@ class BatchParseJob:
 
         log_msg(f'Beginning parse of file: {input_file_name}')
         output_num = 0
-        async for parse_result in parse.parse_with_gpt_multitask(input_data, model=self.gpt_model, prompt_override=self.prompt_override):
+        async for parse_input, parse_result in parse.parse_with_gpt_multitask(input_data, model=self.gpt_model, prompt_override=self.prompt_override):
             # Create a task for each output chunk so that we can write them in parallel
             asyncio.create_task(
                 self.__write_output_for_file_chunk(
+                    parse_input,
                     parse_result, 
                     file_output_uri,
                     output_num))
             output_num += 1
 
 
-    async def __write_output_for_file_chunk(self, output_data, file_output_uri, output_num):
+    async def __write_output_for_file_chunk(self, input_chunk, output_data, file_output_uri, output_num):
+        input_chunk_uri = f'{file_output_uri.rstrip("/")}/output_{output_num}.source.txt'
+        log_msg(f'Writing input chunk {output_num} to {input_chunk_uri}')
+        if self.dry_run:
+            log_msg(f'Would have written {len(input_chunk)} bytes')
+        else:
+            aws.write_file_to_s3(input_chunk_uri, input_chunk)
+
         output_chunk_uri = f'{file_output_uri.rstrip("/")}/output_{output_num}.json'
         log_msg(f'Writing output chunk {output_num} to {output_chunk_uri}')
-
         if self.dry_run:
             log_msg(f'Would have written {len(output_data)} bytes')
-            return
-
-        aws.write_file_to_s3(output_chunk_uri, output_data)
+        else:
+            aws.write_file_to_s3(output_chunk_uri, output_data)
 
 
     async def __copy_input_file_to_output_folder(self, input_name, input_data, output_folder_uri):
