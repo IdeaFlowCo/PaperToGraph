@@ -99,7 +99,7 @@
             if (eventData != 'nodata') {
                 jobLogs.innerHTML += eventData + '<br>';
                 // Scroll to bottom of page in case logs div container is too big
-                document.scrollTop = document.scrollHeight;
+                window.scrollTo(0, document.body.scrollHeight);
             }
         }
     }
