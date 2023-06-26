@@ -23,6 +23,7 @@
     // Extra controls for overriding parse job parameters
     const dryRunCheckbox = document.querySelector("#dry-run");
     const overrideParseOutput = document.querySelector("#override-parse-output");
+    const overridePromptCheckbox = document.querySelector('#override-parse-prompt');
 
     // Extra controls for overriding save job parameters
     const overrideNeoUri = document.querySelector("#override-neo-uri");
@@ -42,6 +43,7 @@
         };
 
     overrideParseOutput.addEventListener('change', makeOverrideListener('override-parse-output', 'override-parse-output-container'));
+    overridePromptCheckbox.addEventListener('change', makeOverrideListener('override-parse-prompt', 'override-parse-prompt-container'));
     overrideNeoUri.addEventListener('change', makeOverrideListener('override-neo-uri', 'override-neo-uri-container'));
     overrideNeoUser.addEventListener('change', makeOverrideListener('override-neo-user', 'override-neo-user-container'));
     overrideNeoPass.addEventListener('change', makeOverrideListener('override-neo-pass', 'override-neo-pass-container'));
@@ -50,33 +52,37 @@
     const buildSubmitBody = () => {
         const dataSource = dataSourceInput.value;
         const jobType = document.querySelector('input[name="job-type"]:checked').value;
-        const model = document.querySelector('input[name="model-select"]:checked')?.value ?? 'any';
         const body = {
             'job_type': jobType,
-            'model': model,
             'data_source': dataSource,
         };
 
-        const overrides = {};
+        const extraArgs = {};
         if (jobType === 'parse') {
+            const model = document.querySelector('input[name="model-select"]:checked')?.value ?? 'any';
+            extraArgs['model'] = model;
             if (dryRunCheckbox.checked) {
-                overrides['dry_run'] = true;
+                extraArgs['dry_run'] = true;
             }
             if (overrideParseOutput.checked) {
-                overrides['output_uri'] = document.querySelector('#parse-output-uri').value;
+                extraArgs['output_uri'] = document.querySelector('#parse-output-uri').value;
+            }
+            if (overridePromptCheckbox.checked) { 
+                extraArgs['prompt'] = document.querySelector('#parse-prompt-text').value;
+            }
+        } else if (jobType === 'save') {
+            if (overrideNeoUri.checked) {
+                extraArgs['neo_uri'] = document.querySelector('#neo-uri').value;
+            }
+            if (overrideNeoUser.checked) { 
+                extraArgs['neo_user'] = document.querySelector('#neo-user').value;
+            }
+            if (overrideNeoPass.checked) {
+                extraArgs['neo_pass'] = document.querySelector('#neo-pass').value;
             }
         }
-        if (overrideNeoUri.checked) {
-            overrides['neo_uri'] = document.querySelector('#neo-uri').value;
-        }
-        if (overrideNeoUser.checked) { 
-            overrides['neo_user'] = document.querySelector('#neo-user').value;
-        }
-        if (overrideNeoPass.checked) {
-            overrides['neo_pass'] = document.querySelector('#neo-pass').value;
-        }
 
-        return Object.assign({}, body, overrides);
+        return Object.assign({}, body, extraArgs);
     }
 
     const jobLogs = document.querySelector('#job-logs');
@@ -92,6 +98,8 @@
             }
             if (eventData != 'nodata') {
                 jobLogs.innerHTML += eventData + '<br>';
+                // Scroll to bottom of page in case logs div container is too big
+                document.scrollTop = document.scrollHeight;
             }
         }
     }
@@ -217,4 +225,30 @@
         }
     };
     document.addEventListener('DOMContentLoaded', checkJobRunning);
+
+    
+    const DEFAULT_PARSE_PROMPT = `
+Each user message will be input text to process. Extract the named entities and their relationships from the text provided. The output should be formatted as a JSON object. Each key in the output object should be the name of an extracted entity. Each value should be an object with a key for each relationship and values representing the target of the relationship. Be sure to separate all comma separated entities that may occur in results into separate items in a list. 
+
+For example, if provided the following input:
+\`\`\`
+Tom Currier is a great guy who built lots of communities after he studied at Stanford and Harvard. He also won the Thiel fellowship. 
+\`\`\`
+An acceptable output would be:
+\`\`\`
+{
+    "Tom Currier": {
+    "studied at": ["Stanford", "Harvard"],
+    "winner of": "Thiel Fellowship"
+    }
+}
+\`\`\`
+
+If no entities or relationships can be extracted from the text provided, respond with NO_ENTITIES_FOUND. Responses should consist only of the extracted data in JSON format, or the string NO_ENTITIES_FOUND.
+`;
+
+    const setDefaultOverridePrompt = () => {
+        document.querySelector('#parse-prompt-text').value = DEFAULT_PARSE_PROMPT.trim();
+    }
+    document.addEventListener('DOMContentLoaded', setDefaultOverridePrompt);
 })();

@@ -31,7 +31,7 @@ def get_text_size_limit(model):
     output_reservation = gpt.parse.get_output_reservation(model)
 
     # Leave ourselves a margin of error based off empirical testing.
-    margin_of_error = 250
+    margin_of_error = 400
 
     # Each token is about 3-4 characters for freeform text (e.g. the text to be parsed, which is what we're sizing here).
     chars_per_token = 3.5
@@ -61,17 +61,21 @@ async def parse_with_gpt(text: str, model="gpt-3.5-turbo"):
     return await master_parse_task
 
 
-async def parse_with_gpt_multitask(text: str, model="gpt-3.5-turbo"):
+async def parse_with_gpt_multitask(text: str, model="gpt-3.5-turbo", prompt_override=None):
     '''
     Splits provided text into smaller pieces and parses each piece in parallel using GPT, yielding results as they come in.
     '''
     text_limit = get_text_size_limit(model)
     log_msg(f'Splitting input text into chunks of {text_limit} characters.')
     text_chunks = split_to_size(text, limit=text_limit)
+
+    if prompt_override:
+        log_msg(f'Using custom parse prompt specified as override:\n{prompt_override}')
+
     # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
     # this is hopefully acceptable behavior.
     # The benefit is that the total parsing is much more resilient with some fault tolerance.
-    parse_work_fn = lambda chunk: gpt.async_fetch_parse(chunk, model=model, skip_on_error=True)
+    parse_work_fn = lambda chunk: gpt.async_fetch_parse(chunk, model=model, skip_on_error=True, prompt_override=prompt_override)
 
     async for result in tasks.create_and_run_tasks(
         task_inputs=text_chunks, 

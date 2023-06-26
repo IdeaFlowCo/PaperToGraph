@@ -8,9 +8,10 @@ from utils import log_msg
 
 
 class BatchParseJob:
-    def __init__(self, gpt_model=None, dry_run=False):
+    def __init__(self, gpt_model=None, dry_run=False, prompt_override=None):
         self.gpt_model = utils.sanitize_gpt_model_choice(gpt_model)
         self.dry_run = dry_run
+        self.prompt_override = prompt_override
 
     async def __find_input_files(self, data_source):
         files = aws.get_objects_at_s3_uri(data_source)
@@ -40,7 +41,7 @@ class BatchParseJob:
 
         log_msg(f'Beginning parse of file: {input_file_name}')
         output_num = 0
-        async for parse_result in parse.parse_with_gpt_multitask(input_data, model=self.gpt_model):
+        async for parse_result in parse.parse_with_gpt_multitask(input_data, model=self.gpt_model, prompt_override=self.prompt_override):
             # Create a task for each output chunk so that we can write them in parallel
             asyncio.create_task(
                 self.__write_output_for_file(

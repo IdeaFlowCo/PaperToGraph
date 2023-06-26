@@ -86,7 +86,8 @@ def make_and_run_parse_job(job_args):
 
     gpt_model = utils.sanitize_gpt_model_choice(job_args.get('model', 'any'))
     dry_run = job_args.get('dry_run', False)
-    parse_job = batch_parse_job.BatchParseJob(gpt_model=gpt_model, dry_run=dry_run)
+    prompt = job_args.get('prompt', None)
+    parse_job = batch_parse_job.BatchParseJob(gpt_model=gpt_model, dry_run=dry_run, prompt_override=prompt)
 
     data_source = job_args['data_source']
     output_uri = job_args.get('output_uri', 's3://paper2graph-parse-results')

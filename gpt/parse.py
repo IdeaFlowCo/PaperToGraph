@@ -29,7 +29,7 @@ PARSE_SM_TEMPLATE = (
     "An acceptable output would be:"
     "\n```\n"
     "{sample_output}"
-    "`\n```\n"
+    "\n```\n"
     "\n"
     "If no entities or relationships can be extracted from the text provided, respond with {none_found}. "
     "Responses should consist only of the extracted data in JSON format, or the string {none_found}."

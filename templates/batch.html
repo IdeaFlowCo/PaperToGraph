@@ -63,11 +63,20 @@
             </div>
             <div class="override-check">
                 <input type="checkbox" id="override-parse-output">
-                <label for="override-parse-output">Specify output URI</label>
+                <label for="override-parse-output">Override output URI</label>
             </div>
             <div id="override-parse-output-container" class="override-input" style="display: none;">
                 <span class="label">Parse output URI</span>
                 <input type="text" id="parse-output-uri" class="text-input" />
+            </div>
+
+            <div class="override-check">
+                <input type="checkbox" id="override-parse-prompt">
+                <label for="override-parse-prompt">Send custom prompt to GPT</label>
+            </div>
+            <div id="override-parse-prompt-container" class="override-input" style="display: none;">
+                <span class="label">Prompt to send to GPT</span>
+                <textarea id="parse-prompt-text"></textarea>
             </div>
         </div>
 
