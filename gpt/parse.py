@@ -8,7 +8,7 @@ import time
 
 import openai
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 
 from utils import log_msg
@@ -16,36 +16,47 @@ from gpt.common import async_fetch_from_openai
 
 
 PARSE_SM_TEMPLATE = (
-    "Each user message will be input text to process. "
-    "Extract the named entities and their relationships from the text provided. "
-    "The output should be formatted as a JSON object. Each key in the output object should be the name of an extracted entity. "
-    "Each value should be an object with a key for each relationship and values representing the target of the relationship. "
-    "Be sure to separate all comma separated entities that may occur in results into separate items in a list. "
-    "\n\n"
-    "For example, if provided the following input:"
-    "\n```\n"
-    "{sample_input}"
-    "\n```\n"
-    "An acceptable output would be:"
-    "\n```\n"
-    "{sample_output}"
-    "\n```\n"
-    "\n"
-    "If no entities or relationships can be extracted from the text provided, respond with {none_found}. "
-    "Responses should consist only of the extracted data in JSON format, or the string {none_found}."
+    'Each user message will be input text to process. '
+    'Extract the named entities and their relationships from the text provided. '
+    'The output should be formatted as a JSON object. Each key in the output object should be the name of an extracted entity. '
+    'Each value should be an object with a key for each relationship and values representing the target of the relationship. '
+    'Be sure to separate all comma separated entities that may occur in results into separate items in a list. '
+    '\n\n'
+    "In addition, if any entity's name includes an abbreviation, include the abbreviation as a separate entity with a special relationship "
+    '"abbreviation of" pointing to the full name of the entity. The entity with the full name should have a special relationship '
+    '"abbreviation", whose target is the abbreviated name. '
+    '\n\n'
+    'For example, if provided the following input:'
+    '\n```\n'
+    '{sample_input}'
+    '\n```\n'
+    'An acceptable output would be:'
+    '\n```\n'
+    '{sample_output}'
+    '\n```\n'
+    '\n'
+    'If no entities or relationships can be extracted from the text provided, respond with {none_found}. '
+    'Responses should consist only of the extracted data in JSON format, or the string {none_found}.'
 )
 
 SAMPLE_PARSE_INPUT = (
-    "Tom Currier is a great guy who built lots of communities after he studied at Stanford and Harvard. "
-    "He also won the Thiel fellowship. "
+    "Tom Currier is a great guy who built lots of communities after he studied at Stanford University (SU) and Harvard. "
+    "He also won the Thiel Fellowship. "
 )
 SAMPLE_PARSE_OUTPUT = (
-    "{"
-    "\n  \"Tom Currier\": {"
-    "\n    \"studied at\": [\"Stanford\", \"Harvard\"],"
-    "\n    \"winner of\": \"Thiel Fellowship\""
-    "\n  }"
-    "\n}"
+    '{'
+    '\n  "Tom Currier": {'
+    '\n    "studied at": ["Stanford University", "Harvard"],'
+    '\n    "winner of": "Thiel Fellowship"'
+    '\n  },'
+    '\n  "Stanford University": {'
+    '\n    "students": ["Tom Currier"],'
+    '\n    "abbreviation": "SU"'
+    '\n  },'
+    '\n  "SU": {'
+    '\n    "abbreviation of": ["Stanford University"],'
+    '\n  },'
+    '\n}'
 )
 NO_ENTITIES_MARKER = 'NO_ENTITIES_FOUND'
 

@@ -17,8 +17,8 @@ def get_text_size_limit(model):
     # and the reesrvation for the output.
     # Can check token length using https://platform.openai.com/tokenizer
 
-    # The default parse prompt sent as system message is 243 tokens; round up to 250 to be safe.
-    parse_prompt_tokens = 250
+    # The default parse prompt sent as system message is 374 tokens; round up to 400 to be safe.
+    parse_prompt_tokens = 400
     
     # Can see max context size for different models here: https://platform.openai.com/docs/models/overview
     if model == 'gpt-3.5-turbo-16k':
