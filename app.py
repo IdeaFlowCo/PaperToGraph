@@ -43,14 +43,6 @@ def __log_args(args):
     log_msg(f'Request arguments: \n{to_log}')
 
 
-def __create_parse_response(message:str, model:str, prompt_override=None):
-    model = utils.sanitize_gpt_model_choice(model)
-    return app.response_class(
-        parse.async_parse_with_heartbeat(message, model=model, prompt_override=prompt_override),
-        mimetype='application/json'
-    )
-
-
 def __wrong_payload_response(message="wrong payload"):
     return {"translation": message}
 
@@ -71,8 +63,21 @@ async def raw_parse():
     log_msg('POST request to /raw-parse endpoint')
     __log_args(post)
     
-    if post is not None:
-        return __create_parse_response(post['text'], post['model'], prompt_override=post.get('prompt_override', None))
+    required_args = ['text']
+    if post is not None or not all(arg in post for arg in required_args):
+        text = post.get('text')
+        model = utils.sanitize_gpt_model_choice(post.get('model'))
+        prompt_override = post.get('prompt_override', None)
+        response = await make_response(
+            parse.async_parse_with_heartbeat(text, model=model, prompt_override=prompt_override),
+            {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache',
+                'Transfer-Encoding': 'chunked',
+            },
+        )
+        response.timeout = None
+        return response
     else:
         return jsonify(__wrong_payload_response(), 400)
 
@@ -211,7 +216,9 @@ def __handle_neo_credential_overrides():
     app.config.update(NEO4J_CREDENTIALS=neo_credentials)
 
 
-if __name__ == '__main__':
+
+@app.before_serving
+async def server_setup():
     if app.config.get('LOG_LEVEL'):
         utils.setup_logger(level=app.config.get('LOG_LEVEL'))
     else:
@@ -220,7 +227,9 @@ if __name__ == '__main__':
 
     __handle_neo_credential_overrides()
 
-    log_msg('Starting server...')
+
+if __name__ == '__main__':
+    print('Starting server...')
     if app.config.get('DEV_SERVER'):
         app.run(host="127.0.0.1", port=5001, debug=True)
     else:
