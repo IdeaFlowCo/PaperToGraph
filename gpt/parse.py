@@ -21,6 +21,8 @@ PARSE_SM_TEMPLATE = (
     'The output should be formatted as a JSON object. Each key in the output object should be the name of an extracted entity. '
     'Each value should be an object with a key for each relationship and values representing the target of the relationship. '
     'Be sure to separate all comma separated entities that may occur in results into separate items in a list. '
+    'Add a special field on the output of every node, _ENTITY_TYPE, that classifies the extracted entity as a '
+    'Drug, Disease, or something else (in which case say: Other). '
     '\n\n'
     "In addition, if any entity's name includes an abbreviation, include the abbreviation as a separate entity with a special relationship "
     '"abbreviation of" pointing to the full name of the entity. The entity with the full name should have a special relationship '
@@ -45,17 +47,20 @@ SAMPLE_PARSE_INPUT = (
 )
 SAMPLE_PARSE_OUTPUT = (
     '{'
-    '\n  "Tom Currier": {'
-    '\n    "studied at": ["Stanford University", "Harvard"],'
-    '\n    "winner of": "Thiel Fellowship"'
-    '\n  },'
-    '\n  "Stanford University": {'
-    '\n    "students": ["Tom Currier"],'
-    '\n    "abbreviation": "SU"'
-    '\n  },'
-    '\n  "SU": {'
-    '\n    "abbreviation of": ["Stanford University"],'
-    '\n  },'
+    '\n"Tom Currier": {'
+    '\n  "studied at": ["Stanford University", "Harvard"],'
+    '\n  "winner of": "Thiel Fellowship"'
+    '\n  "_ENTITY_TYPE": "Other"'
+    '\n},'
+    '\n"Stanford University": {'
+    '\n  "students": ["Tom Currier"],'
+    '\n  "abbreviation": "SU"'
+    '\n  "_ENTITY_TYPE": "Other"'
+    '\n},'
+    '\n"SU": {'
+    '\n  "abbreviation of": ["Stanford University"],'
+    '\n  "_ENTITY_TYPE": "Other"'
+    '\n},'
     '\n}'
 )
 NO_ENTITIES_MARKER = 'NO_ENTITIES_FOUND'
@@ -86,6 +91,39 @@ def get_output_reservation(model):
         # Asssuming GPT-3.5-turbo
         # Max context size: 4,096 tokens
         return 1600
+
+
+def get_text_size_limit(model):
+    '''
+    Returns desired length of text to be parsed, in number of characters, based on model to be used.
+    '''
+    # Different models have different max context sizes, where "context size" is the total number of tokens
+    # used in the completion request, inclduding all of: the prompt in the system message, the text to be parsed,
+    # and the reesrvation for the output.
+    # Can check token length using https://platform.openai.com/tokenizer
+
+    # The default parse prompt sent as system message is 431 tokens; round up to 450 to be safe.
+    parse_prompt_tokens = 450
+    
+    # Can see max context size for different models here: https://platform.openai.com/docs/models/overview
+    if model == 'gpt-3.5-turbo-16k':
+        max_context_tokens = 16384
+    elif model == 'gpt-4':
+        max_context_tokens = 8192
+    else:
+        max_context_tokens = 4096
+
+    output_reservation = get_output_reservation(model)
+
+    # Leave ourselves a margin of error based off empirical testing.
+    margin_of_error = 400
+
+    # Each token is about 3-4 characters for freeform text (e.g. the text to be parsed, which is what we're sizing here).
+    chars_per_token = 3.5
+    
+    tokens_for_input = max_context_tokens - parse_prompt_tokens - output_reservation - margin_of_error
+
+    return int(tokens_for_input * chars_per_token)
 
 
 def get_timeout_limit(model):
