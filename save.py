@@ -137,6 +137,10 @@ def save_json_data(json_str, saved_input_uri=None, neo_config=None):
     # Create a Neo4j driver instance
     driver = __get_neo4j_driver(neo_config)
 
+    if saved_input_uri:
+        # Ensure save input URI is an HTTP URL for easy access from Neo4j
+        saved_input_uri = aws.s3_uri_to_http(saved_input_uri)
+
     # Use a single timestamp for marking creation time of all entities/relationships in this run
     created_ts = DateTime.now()
 

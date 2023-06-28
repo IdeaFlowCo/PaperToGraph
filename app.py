@@ -28,6 +28,7 @@ sentry_sdk.init(
 
 
 app = Quart(__name__)
+app.config.from_prefixed_env('P2G')
 app.config.update(ENV='development')
 app.config.update(SECRET_KEY='878as7d8f7997dfaewrwv8asdf8)(dS&A&*d78(*&ASD08A')
 
@@ -195,30 +196,32 @@ async def batch_log():
     return response
 
 
-def __handle_neo_credential_override(args):
-    neo_credentials = utils.neo_config_from_args_or_env(args)
+def __handle_neo_credential_overrides():
+    neo_credentials = app.config.get('NEO4J_CREDENTIALS', {})
+    neo_cred_overrides = utils.get_neo_config_from_env()
     # Ignore any override values that are None or empty strings
-    neo_credentials = {k: v for k, v in neo_credentials.items() if v}
-    log_msg(f'Neo4j credential overrides: {neo_credentials}')
+    neo_cred_overrides = {k: v for k, v in neo_cred_overrides.items() if v}
+
+    if not neo_cred_overrides:
+        log_msg('No Neo4j credential overrides from environment variables')
+        return
+    
+    log_msg(f'Neo4j credential overrides from environment variables: {neo_cred_overrides}')
+    neo_credentials.update(neo_cred_overrides)
     app.config.update(NEO4J_CREDENTIALS=neo_credentials)
 
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser()
-
-    argparser.add_argument('--local', dest='local', action='store_true')
-
-    utils.add_neo_credential_override_args(argparser)
-
-    args = argparser.parse_args()
-
-    __handle_neo_credential_override(args)
-
-    log_msg('Starting server...')
-    if args.local:
-        utils.setup_logger()
-        # utils.setup_logger(level=logging.DEBUG)
-        app.run(host="127.0.0.1", port=5001, debug=True)
+    if app.config.get('LOG_LEVEL'):
+        utils.setup_logger(level=app.config.get('LOG_LEVEL'))
     else:
         utils.setup_logger()
-        app.run_server(debug=True, use_reloader=False )
+    log_msg('Logger initialized') 
+
+    __handle_neo_credential_overrides()
+
+    log_msg('Starting server...')
+    if app.config.get('DEV_SERVER'):
+        app.run(host="127.0.0.1", port=5001, debug=True)
+    else:
+        app.run_server(use_reloader=False )

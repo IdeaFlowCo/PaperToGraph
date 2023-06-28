@@ -65,6 +65,17 @@ def setup_log_file(log_file):
     open(log_file, 'w').close()
 
 
+def get_neo_config_from_env():
+    neo_credentials = {
+        'uri': os.environ.get('NEO_URI'),
+        'user': os.environ.get('NEO_USER'),
+        'password': os.environ.get('NEO_PASS')
+    }
+    # Ignore any override values that are None or empty strings
+    neo_credentials = {k: v for k, v in neo_credentials.items() if v}
+    return neo_credentials
+
+
 def add_neo_credential_override_args(parser):
     parser.add_argument(
         '--neo_uri', help="The URI for the Neo4j instance to save loaded data to.")

@@ -3,7 +3,7 @@ Utilities for accesing AWS services.
 '''
 from datetime import datetime
 import os
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 
 import boto3
 
@@ -18,9 +18,10 @@ def check_for_aws_env_vars():
     aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
     if not aws_access_key_id or not aws_secret_access_key:
         print(
-            'WARNING: AWS credentials not found in environment! Batch job code assumes '
+            'WARNING: AWS credentials not found in environment! Various code assumes '
             'AWS_SECRET_KEY_ID and AWS_SECRET_ACCESS_KEY are set in order to work. '
         )
+
 
 def parse_s3_uri(uri):
     '''
@@ -30,6 +31,39 @@ def parse_s3_uri(uri):
     if parsed.scheme != 's3':
         return None, None
     return parsed.netloc, parsed.path.lstrip('/')
+
+
+S3_HTTP_PREFIX = 'https://s3.console.aws.amazon.com/s3/'
+
+def s3_uri_to_http(uri):
+     if uri.startswith('s3://'):
+         bucket, key = parse_s3_uri(uri)
+         return f'{S3_HTTP_PREFIX.rstrip("/")}/buckets/{bucket}?prefix={key}'
+     elif uri.startswith(S3_HTTP_PREFIX):
+         return uri
+     else:
+         return None
+
+
+def http_to_s3_uri(url):
+     if url.startswith(S3_HTTP_PREFIX):
+        parsed = urlparse(url)
+        # URLs will either be in the form
+        # https://s3.console.aws.amazon.com/s3/buckets/{bucket}?prefix={prefix}
+        # or
+        # https://s3.console.aws.amazon.com/s3/object/{bucket}?prefix={prefix}
+        # with (optional) additional query parameters.
+        # In either case, the bucket name is the last part of the URL path
+        bucket = os.path.basename(parsed.path)
+        # Parse query string to separate arguments into dict
+        query_params = parse_qs(parsed.query)
+        # Because query params are always parsed to lists, need to specifically get first element
+        key = query_params.get('prefix', [''])[0]
+        return f'{S3_HTTP_PREFIX.rstrip("/")}/{bucket}/{key}'
+     elif url.startswith('s3://'):
+         return url
+     else:
+         return None
 
 
 def get_objects_at_s3_uri(uri):
