@@ -79,5 +79,5 @@ def save_input_text(text):
     output_uri = f'{WEB_SUBMISSIONS_URI.rstrip("/")}/{hash_slug}.txt'
     log_msg(f'Saving input text to {output_uri}')
     # This call will raise Exception if any issue, but just let that bubble up:
-    aws.write_file_to_s3(output_uri, text)
+    aws.write_to_s3_file(output_uri, text)
     return output_uri

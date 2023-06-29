@@ -11,7 +11,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 
 from utils import log_msg
 
-from .common import async_fetch_from_openai
+from .common import async_fetch_from_openai, get_context_window_size
 from .text import get_token_length
 
 
@@ -103,19 +103,14 @@ def get_text_token_limit(model):
     # The number of tokens in the system message prompt.
     parse_prompt_tokens = get_token_length(PARSE_SYSTEM_MESSAGE['content'])
 
-    # Can see max context size for different models here: https://platform.openai.com/docs/models/overview
-    if model == 'gpt-3.5-turbo-16k':
-        max_context_tokens = 16384
-    elif model == 'gpt-4':
-        max_context_tokens = 8192
-    else:
-        max_context_tokens = 4096
+    # The maximum number of tokens in this model's context window.
+    max_context_tokens = get_context_window_size(model)
 
     # The number of tokens to reserve for the output.
     output_reservation = get_output_reservation(model)
 
-    # Leave ourselves a margin of error, just to be safe.
-    margin_of_error = 100
+    # Leave ourselves a margin of error to account for structural overhead + just to be safe.
+    margin_of_error = 200
 
     tokens_for_input = max_context_tokens - parse_prompt_tokens - output_reservation - margin_of_error
 
@@ -138,7 +133,7 @@ def get_timeout_limit(model):
     if model == 'gpt-3.5-turbo-16k':
         return 75
     elif model == 'gpt-4':
-        return 75
+        return 90
     else:
         return 60
 

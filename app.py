@@ -234,6 +234,11 @@ async def server_setup():
     aws.check_for_env_vars(throw_if_missing=False)
 
 
+@app.before_serving
+async def batch_job_setup():
+    batch.setup_status_file()
+
+
 if __name__ == '__main__':
     print('Starting server...')
     if app.config.get('DEV_SERVER'):

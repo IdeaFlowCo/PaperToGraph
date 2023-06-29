@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import json
 
 import aws
 import parse
@@ -8,10 +9,15 @@ from utils import log_msg
 
 
 class BatchParseJob:
-    def __init__(self, gpt_model=None, dry_run=False, prompt_override=None):
+    def __init__(self, gpt_model=None, dry_run=False, prompt_override=None, log_file=None):
         self.gpt_model = utils.sanitize_gpt_model_choice(gpt_model)
         self.dry_run = dry_run
         self.prompt_override = prompt_override
+        self.log_file = log_file
+        # Will be set by run() when output folder is created
+        self.job_output_uri = None
+        # Will be filled with tasks writing output files to S3
+        self.output_tasks = set()
 
     async def __find_input_files(self, data_source):
         files = aws.get_objects_at_s3_uri(data_source)
@@ -28,14 +34,14 @@ class BatchParseJob:
         log_msg(f'Loaded {len(data)} bytes')
         return file_name, data
 
-    async def __process_file(self, file_uri, job_output_uri):
+    async def __process_file(self, file_uri):
         try:
             input_file_name, input_data = await self.__fetch_input_file(file_uri)
         except UnicodeDecodeError:
             log_msg(f'Could not decode file {file_uri} as UTF-8. Skipping.')
             return
 
-        file_output_uri = aws.create_output_dir_for_file(job_output_uri, input_file_name, dry_run=self.dry_run)
+        file_output_uri = aws.create_output_dir_for_file(self.job_output_uri, input_file_name, dry_run=self.dry_run)
 
         await self.__copy_input_file_to_output_folder(input_file_name, input_data, file_output_uri)
 
@@ -44,14 +50,16 @@ class BatchParseJob:
             input_data, model=self.gpt_model, prompt_override=self.prompt_override)
         output_num = 0
         async for parse_input, parse_result in parse_multitask:
+            output_num += 1
             # Create a task for each output chunk so that we can write them in parallel
-            asyncio.create_task(
+            task = asyncio.create_task(
                 self.__write_output_for_file_chunk(
                     parse_input,
                     parse_result,
                     file_output_uri,
                     output_num))
-            output_num += 1
+            self.output_tasks.add(task)
+            task.add_done_callback(self.output_tasks.discard)
 
     async def __write_output_for_file_chunk(self, input_chunk, output_data, file_output_uri, output_num):
         input_chunk_uri = f'{file_output_uri.rstrip("/")}/output_{output_num}.source.txt'
@@ -59,14 +67,14 @@ class BatchParseJob:
         if self.dry_run:
             log_msg(f'Would have written {len(input_chunk)} bytes')
         else:
-            aws.write_file_to_s3(input_chunk_uri, input_chunk)
+            aws.write_to_s3_file(input_chunk_uri, input_chunk)
 
         output_chunk_uri = f'{file_output_uri.rstrip("/")}/output_{output_num}.json'
         log_msg(f'Writing output chunk {output_num} to {output_chunk_uri}')
         if self.dry_run:
             log_msg(f'Would have written {len(output_data)} bytes')
         else:
-            aws.write_file_to_s3(output_chunk_uri, output_data)
+            aws.write_to_s3_file(output_chunk_uri, output_data)
 
     async def __copy_input_file_to_output_folder(self, input_name, input_data, output_folder_uri):
         log_msg(f'Writing copy of input file {input_name} to output folder {output_folder_uri}')
@@ -75,7 +83,37 @@ class BatchParseJob:
             return
 
         copied_file_uri = f'{output_folder_uri.rstrip("/")}/source.txt'
-        aws.write_file_to_s3(copied_file_uri, input_data)
+        aws.write_to_s3_file(copied_file_uri, input_data)
+
+    async def __write_job_args_to_output_folder(self, data_source, output_uri_arg):
+        job_args_uri = f'{self.job_output_uri.rstrip("/")}/job_args.json'
+        if self.dry_run:
+            log_msg(f'Would have written job args to {job_args_uri}')
+            return
+
+        job_args = {
+            'data_source': data_source,
+            'output_uri': output_uri_arg,
+            'gpt_model': self.gpt_model,
+        }
+        job_args = json.dumps(job_args, indent=2)
+        aws.write_to_s3_file(job_args_uri, job_args)
+
+    async def __upload_log_file(self):
+        if not self.log_file:
+            return
+
+        # Ensure all output tasks are done before uploading log file
+        await asyncio.gather(*self.output_tasks)
+        log_msg('All output tasks complete.')
+
+        log_file_uri = f'{self.job_output_uri.rstrip("/")}/job_log.txt'
+
+        if self.dry_run:
+            log_msg(f'Would have uploaded job log file to {log_file_uri}')
+        else:
+            log_msg(f'Uploading job log file to {log_file_uri}')
+            aws.upload_to_s3(log_file_uri, self.log_file)
 
     async def run(self, data_source, output_uri):
         # Standardize on s3:// URIs within batch code.
@@ -83,11 +121,21 @@ class BatchParseJob:
         output_uri = aws.http_to_s3_uri(output_uri)
 
         log_msg(f'Beginning parse job for {data_source} using GPT model {self.gpt_model}')
+
+        # Gather input files first so that we can fail fast if there are any issues doing so.
         input_files = await self.__find_input_files(data_source)
-        job_output_uri = aws.create_output_dir_for_job(data_source, output_uri, dry_run=self.dry_run)
+
+        self.job_output_uri = aws.create_output_dir_for_job(data_source, output_uri, dry_run=self.dry_run)
+
+        # Preserve this job's args in the output folder for any future investigations.
+        await self.__write_job_args_to_output_folder(data_source, output_uri)
+
         for i, input_file in enumerate(input_files):
             log_msg(f'********* Processing file {input_file} ({i+1} out of {len(input_files)})')
-            await self.__process_file(input_file, job_output_uri)
+            await self.__process_file(input_file)
+
+        log_msg(f'All parsing complete.')
+        await self.__upload_log_file()
 
 
 if __name__ == "__main__":

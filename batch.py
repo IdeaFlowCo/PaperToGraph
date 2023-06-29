@@ -1,6 +1,6 @@
 import asyncio
+import os
 import threading
-
 
 import batch_parse_job
 import batch_save_job
@@ -8,8 +8,8 @@ import utils
 from utils import log_msg
 
 
-STATUS_FILE = '/tmp/p2g_batch_job_status.txt'
-LOG_FILE = 'logs/batch-job.log'
+STATUS_FILE = '/tmp/p2g/p2g_batch_job_status.txt'
+LOG_FILE = '/tmp/p2g/batch-job.log'
 
 NOT_STARTED = 'Not started'
 RUNNING = 'Running'
@@ -65,6 +65,14 @@ class BatchJobThread(threading.Thread):
         self._cancel_flag.set()
 
 
+def setup_status_file():
+    # Make intermediate directories if necessary
+    if os.path.dirname(STATUS_FILE):
+        os.makedirs(os.path.dirname(STATUS_FILE), exist_ok=True)
+    # Clear any previous contents
+    open(STATUS_FILE, 'w').close()
+
+
 def cancel_batch_job():
     with open(STATUS_FILE, "w") as f:
         f.write(CANCELING)
@@ -87,21 +95,26 @@ def make_and_run_parse_job(job_args):
     gpt_model = utils.sanitize_gpt_model_choice(job_args.get('model', 'any'))
     dry_run = job_args.get('dry_run', False)
     prompt = job_args.get('prompt', None)
-    parse_job = batch_parse_job.BatchParseJob(gpt_model=gpt_model, dry_run=dry_run, prompt_override=prompt)
+    parse_job = batch_parse_job.BatchParseJob(
+        gpt_model=gpt_model,
+        dry_run=dry_run,
+        prompt_override=prompt,
+        log_file=LOG_FILE
+    )
 
     data_source = job_args['data_source']
     output_uri = job_args.get('output_uri', 's3://paper2graph-parse-results')
-    work_fn = lambda: parse_job.run(data_source, output_uri)
+    def work_fn(): return parse_job.run(data_source, output_uri)
 
     utils.setup_logger(name=thread_name, log_file=LOG_FILE)
-    
+
     batch_job_thread = BatchJobThread(thread_name, work_fn)
     batch_job_thread.start()
 
 
 def make_and_run_save_job(job_args, neo_config):
     thread_name = utils.BATCH_SAVE_THREAD_NAME
-    
+
     data_source = job_args['data_source']
     if 'neo_uri' in job_args:
         neo_config['uri'] = job_args['neo_uri']
@@ -110,10 +123,9 @@ def make_and_run_save_job(job_args, neo_config):
     if 'neo_password' in job_args:
         neo_config['password'] = job_args['neo_password']
 
-    work_fn = lambda: batch_save_job.save_to_neo4j(data_source, neo_config)
+    def work_fn(): return batch_save_job.save_to_neo4j(data_source, neo_config)
 
     utils.setup_logger(name=thread_name, log_file=LOG_FILE)
 
     batch_job_thread = BatchJobThread(thread_name, work_fn)
     batch_job_thread.start()
-

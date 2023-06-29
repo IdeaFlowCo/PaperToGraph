@@ -4,7 +4,9 @@ Shared code for interacting with OpenAI APIs.
 
 import asyncio
 import json
+import math
 import os
+import random
 
 import openai
 
@@ -63,15 +65,75 @@ def clean_json(response):
         return response
 
 
+def get_context_window_size(model):
+    # Can see max context size for different models here: https://platform.openai.com/docs/models/overview
+    if model == 'gpt-3.5-turbo-16k':
+        max_context_tokens = 16384
+    elif model == 'gpt-4':
+        max_context_tokens = 8192
+    else:
+        # Assume gpt-3.5-turbo
+        max_context_tokens = 4096
+
+    return max_context_tokens
+
+
+def get_max_requests_per_minute(model):
+    # All rate limits can be found at https://platform.openai.com/docs/guides/rate-limits/what-are-the-rate-limits-for-our-api
+    if model == 'gpt-4':
+        # GPT-4 has extra aggressive rate limiting in place.
+        # https://platform.openai.com/docs/guides/rate-limits/gpt-4-rate-limits
+        # 200 RPM
+        requests_per_minute_limit = 200.0
+        # 40k TPM
+        tokens_per_minute_limit = 40000.0
+    elif model == 'gpt-3.5-turbo-16k':
+        # 60 RPM
+        requests_per_minute_limit = 60.0
+        # 120k TPM
+        tokens_per_minute_limit = 120000.0
+    else:
+        # Assume gpt-3.5-turbo
+        # 60 RPM
+        requests_per_minute_limit = 60.0
+        # 60k TPM
+        tokens_per_minute_limit = 60000.0
+
+    # Assume we're using full context window tokens in every request
+    tokens_per_request = get_context_window_size(model)
+    # Round down to be extra conservative
+    requests_per_minute_by_tpm = math.floor(tokens_per_minute_limit / tokens_per_request)
+
+    # Use whichever limit is stricter
+    return min(requests_per_minute_limit, requests_per_minute_by_tpm)
+
+
+def get_rl_backoff_time(model):
+    '''
+    Returns the number of seconds to wait before retrying a request for a given model.
+    '''
+    rpm_limit = get_max_requests_per_minute(model)
+
+    # Round up to be extra conservative
+    seconds_per_request = math.ceil(60.0 / rpm_limit)
+
+    # Use a jitter factor so delays don't all hit at once
+    jitter_factor = 1 + random.random()
+    delay = seconds_per_request * jitter_factor
+
+    return delay
+
+
 async def async_fetch_from_openai(
-        messages, 
-        log_label, 
-        model="gpt-3.5-turbo", 
+        messages,
+        log_label,
+        model="gpt-3.5-turbo",
         skip_msg=None,
         max_tokens=1500,
         timeout=60,
         skip_on_error=False,
-        should_retry=True):
+        should_retry=True,
+        rate_limit_errors=0):
     '''
     Common scaffolding code for fetching from OpenAI, with shared logic for different kinds of error handling.
     '''
@@ -92,18 +154,23 @@ async def async_fetch_from_openai(
             raise err
 
         log_msg('Rate limit error from OpenAI')
-        # Worst case rate limit is 60 requests-per-minute, 60,000 tokens-per-minute, per rate limit docs.
-        # https://platform.openai.com/docs/guides/rate-limits/overview
-        # Max tokens per request is ~8000, meaning we can send ~7.5 requests/minute, so we'll wait 8 seconds and try again.
-        await asyncio.sleep(8)
-        # This is common enough and the exception triggers fast enough that it shouldn't "use up" a retry in our logic.
+        if rate_limit_errors > 4:
+            log_msg('Too many rate limit errors; abandoning this request and letting error bubble up.')
+            raise err
+
+        backoff_time = get_rl_backoff_time(model)
+        # Every time we get a rate limit error, we double the backoff time.
+        backoff_time = backoff_time * (2 ** rate_limit_errors)
+        await asyncio.sleep(backoff_time)
+
         return await async_fetch_from_openai(
             messages,
             log_label,
             model=model,
             max_tokens=max_tokens,
-            skip_on_error=skip_on_error, 
-            should_retry=should_retry
+            skip_on_error=skip_on_error,
+            should_retry=should_retry,
+            rate_limit_errors=rate_limit_errors + 1
         )
     except openai.error.InvalidRequestError as err:
         log_msg(f'Invalid request error from OpenAI: {err}')
@@ -143,7 +210,13 @@ async def async_fetch_from_openai(
             return ''
         raise err
 
-    result = result["choices"][0]["message"]["content"].strip()
+    result = result["choices"][0]
+    if result['finish_reason'] != 'stop':
+        # "stop" is the standard finish reason; if we get something else, we might want to investigate.
+        # See: https://platform.openai.com/docs/guides/gpt/chat-completions-response-format
+        log_msg(f'OpenAI finish reason: "{result["finish_reason"]}".')
+
+    result = result["message"]["content"].strip()
     log_msg(f'Received {log_label.lower()} response from OpenAI')
     log_debug(f'Response data: \n{result}')
     if result == skip_msg:
@@ -169,4 +242,3 @@ async def async_fetch_from_openai(
             )
             return ''
     return result
-

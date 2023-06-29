@@ -70,12 +70,21 @@ def create_output_dir_for_file(output_uri, file_name, dry_run=False):
             f'Error creating output subdirectory at {output_path}', response)
 
 
-def write_file_to_s3(output_uri, data):
+def write_to_s3_file(output_uri, data):
     '''
-    Write a file to S3.
+    Write data to a file in S3.
     '''
     bucket, key = parse_s3_uri(output_uri)
     s3_client = boto3.client('s3')
     response = s3_client.put_object(Bucket=bucket, Key=key, Body=data)
     if response['ResponseMetadata']['HTTPStatusCode'] != 200:
         raise Exception(f'Error writing file to {key}', response)
+
+
+def upload_to_s3(output_uri, file_path):
+    '''
+    Upload a file to S3.
+    '''
+    bucket, key = parse_s3_uri(output_uri)
+    s3_client = boto3.client('s3')
+    s3_client.upload_file(file_path, bucket, key)

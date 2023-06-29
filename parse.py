@@ -3,7 +3,7 @@ Functions for parsing text into maps of entities and relationships.
 '''
 
 import gpt
-from gpt import is_text_oversized, split_to_size, split_to_token_size
+from gpt import is_text_oversized, split_to_size, split_to_token_size, get_max_requests_per_minute
 from utils import log_msg
 import tasks
 
@@ -20,10 +20,13 @@ async def parse_with_gpt(text: str, model="gpt-3.5-turbo"):
     # The benefit is that the total parsing is much more resilient with some fault tolerance.
     def parse_work_fn(chunk): return gpt.async_fetch_parse(chunk, model=model, skip_on_error=True)
 
+    max_tasks = get_max_requests_per_minute(model)
+
     master_parse_task = tasks.create_task_of_tasks(
         task_inputs=text_chunks,
         work_fn=parse_work_fn,
-        task_label='Parse'
+        task_label='Parse',
+        max_simul_tasks=max_tasks
     )
     return await master_parse_task
 
@@ -49,10 +52,13 @@ async def parse_with_gpt_multitask(text: str, model="gpt-3.5-turbo", prompt_over
         prompt_override=prompt_override,
         return_source=True)
 
+    max_tasks = get_max_requests_per_minute(model)
+
     async for result in tasks.create_and_run_tasks(
         task_inputs=text_chunks,
         work_fn=parse_work_fn,
-        task_label='Parse'
+        task_label='Parse',
+        max_simul_tasks=max_tasks
     ):
         yield result
 

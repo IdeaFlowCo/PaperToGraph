@@ -27,6 +27,14 @@ async def __fetch_input_file(file_uri):
     return file_name, data
 
 
+def __is_parse_output_uri(uri):
+    file_basename = os.path.basename(uri)
+    if file_basename == 'job_args.json':
+        # Never process the job args file
+        return False
+    return file_basename.startswith('output_') and file_basename.endswith('.json')
+
+
 def __source_matches_output(source_uri, output_uri):
     source_basename = os.path.basename(source_uri)
     output_basename = os.path.basename(output_uri)
@@ -34,7 +42,7 @@ def __source_matches_output(source_uri, output_uri):
 
 
 async def __process_folder(folder_files, neo_config):
-    parse_output_uris = list(filter(lambda uri: uri.endswith('.json'), folder_files))
+    parse_output_uris = list(filter(__is_parse_output_uri, folder_files))
     source_text_uris = list(filter(lambda uri: uri.endswith('source.txt'), folder_files))
 
     if len(source_text_uris) == 0:
