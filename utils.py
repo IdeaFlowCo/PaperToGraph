@@ -9,6 +9,7 @@ BATCH_PARSE_THREAD_NAME = 'p2g-batch-parse'
 BATCH_SAVE_THREAD_NAME = 'p2g-batch-save'
 BATCH_THREAD_NAMES = {BATCH_PARSE_THREAD_NAME, BATCH_SAVE_THREAD_NAME}
 
+
 def get_logger():
     if threading.current_thread().name in BATCH_THREAD_NAMES:
         logger_name = threading.current_thread().name
@@ -17,21 +18,30 @@ def get_logger():
     return logging.getLogger(logger_name)
 
 
-def log_msg(msg:str, level=logging.INFO):
+def log_msg(msg: str, level=logging.INFO):
     '''
     Log provided message in a standardized way.
     '''
     return get_logger().log(level, msg)
 
 
-def log_debug(msg:str):
+def log_debug(msg: str):
     return log_msg(msg, level=logging.DEBUG)
+
+
+def log_warn(msg: str):
+    return log_msg(msg, level=logging.WARNING)
+
+
+def log_error(msg: str):
+    return log_msg(msg, level=logging.ERROR)
 
 
 def setup_logger(name=None, log_file=None, level=logging.INFO):
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    formatter = logging.Formatter('[%(asctime)s][%(name)s][%(levelname)s] %(message)s')
+    formatter = logging.Formatter(
+        '[%(asctime)s][%(name)s][%(levelname)s] %(message)s')
 
     if len(logger.handlers) > 0:
         # Logger already exists/has handlers, so don't add any more
@@ -86,9 +96,12 @@ def add_neo_credential_override_args(parser):
 
 
 def neo_config_from_args_or_env(args):
-    uri_override = args.neo_uri if args.neo_uri is not None else os.environ.get('NEO_URI')
-    user_override = args.neo_user if args.neo_user is not None else os.environ.get('NEO_USER')
-    pass_override = args.neo_pass if args.neo_pass is not None else os.environ.get('NEO_PASS')
+    uri_override = args.neo_uri if args.neo_uri is not None else os.environ.get(
+        'NEO_URI')
+    user_override = args.neo_user if args.neo_user is not None else os.environ.get(
+        'NEO_USER')
+    pass_override = args.neo_pass if args.neo_pass is not None else os.environ.get(
+        'NEO_PASS')
     neo_credentials = {
         'uri': uri_override,
         'user': user_override,

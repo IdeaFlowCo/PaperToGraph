@@ -14,24 +14,23 @@ import utils
 from utils import log_msg
 
 
-sentry_sdk.init(
-    dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
-    integrations=[
-        QuartIntegration(),
-    ],
+# sentry_sdk.init(
+#     dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
+#     integrations=[
+#         QuartIntegration(),
+#     ],
 
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for performance monitoring.
-    # Sentry recommends adjusting this value in production.
-    traces_sample_rate=1.0
-)
+#     # Set traces_sample_rate to 1.0 to capture 100%
+#     # of transactions for performance monitoring.
+#     # Sentry recommends adjusting this value in production.
+#     traces_sample_rate=1.0
+# )
 
 
 app = Quart(__name__)
 app.config.from_prefixed_env('P2G')
 app.config.update(ENV='development')
 app.config.update(SECRET_KEY='878as7d8f7997dfaewrwv8asdf8)(dS&A&*d78(*&ASD08A')
-
 
 
 def __log_args(args):
@@ -49,12 +48,12 @@ def __wrong_payload_response(message="wrong payload"):
 
 @app.route('/')
 async def home():
-   return await render_template("index.html")
+    return await render_template("index.html")
 
 
 @app.route('/extractor')
 async def extractor():
-   return await render_template("index.html")
+    return await render_template("index.html")
 
 
 @app.route("/raw-parse", methods=["POST"])
@@ -62,7 +61,7 @@ async def raw_parse():
     post = await request.get_json()
     log_msg('POST request to /raw-parse endpoint')
     __log_args(post)
-    
+
     required_args = ['text']
     if post is not None or not all(arg in post for arg in required_args):
         text = post.get('text')
@@ -84,21 +83,21 @@ async def raw_parse():
 
 @app.route("/save-to-neo", methods=["POST"])
 async def save_to_neo():
-    post= await request.get_json()
+    post = await request.get_json()
     log_msg('POST request to /save-to-neo endpoint')
     __log_args(post)
-    
+
     required_args = ['data', 'input_text']
     if post is None or not all(arg in post for arg in required_args):
         return jsonify(__wrong_payload_response(), 400)
-    
+
     try:
         # Make sure data is valid JSON
         json.loads(post['data'])
         log_msg('About to save input text')
         saved_input_uri = save.save_input_text(post['input_text'])
         log_msg('Saved input text')
-        save.save_json_data(post['data'], saved_input_uri=saved_input_uri, neo_config=app.config.get('NEO4J_CREDENTIALS'))
+        save.save_json_data(post['data'], source_uri=saved_input_uri, neo_config=app.config.get('NEO4J_CREDENTIALS'))
         return jsonify({'status': 'success'}, 200)
     except json.JSONDecodeError:
         return jsonify({'status': 'error', 'message': 'data provided not valid JSON'}, 400)
@@ -106,7 +105,7 @@ async def save_to_neo():
 
 @app.route('/batch')
 async def batch_page():
-   return await render_template("batch.html")
+    return await render_template("batch.html")
 
 
 @app.route('/batch-status')
@@ -125,11 +124,11 @@ async def new_batch_job():
 
     if batch.is_batch_job_running():
         return jsonify({'status': 'error', 'message': 'batch job already running'}), 400
-    
+
     required_args = ['job_type', 'data_source']
     if post is None or not all(arg in post for arg in required_args):
         return jsonify(__wrong_payload_response(), 400)
-    
+
     if post['job_type'] == 'parse':
         batch.make_and_run_parse_job(post)
         return jsonify({'status': 'success', 'message': 'New job started'}), 200
@@ -191,7 +190,7 @@ async def batch_log():
 
     response = await make_response(
         tail_log(batch.LOG_FILE),
-         {
+        {
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-cache',
             'Transfer-Encoding': 'chunked',
@@ -210,11 +209,10 @@ def __handle_neo_credential_overrides():
     if not neo_cred_overrides:
         log_msg('No Neo4j credential overrides from environment variables')
         return
-    
+
     log_msg(f'Neo4j credential overrides from environment variables: {neo_cred_overrides}')
     neo_credentials.update(neo_cred_overrides)
     app.config.update(NEO4J_CREDENTIALS=neo_credentials)
-
 
 
 @app.before_serving
@@ -223,7 +221,7 @@ async def server_setup():
         utils.setup_logger(level=app.config.get('LOG_LEVEL'))
     else:
         utils.setup_logger()
-    log_msg('Logger initialized') 
+    log_msg('Logger initialized')
 
     __handle_neo_credential_overrides()
 
@@ -233,4 +231,4 @@ if __name__ == '__main__':
     if app.config.get('DEV_SERVER'):
         app.run(host="127.0.0.1", port=5001, debug=True)
     else:
-        app.run_server(use_reloader=False )
+        app.run_server(use_reloader=False)
