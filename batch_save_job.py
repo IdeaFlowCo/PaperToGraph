@@ -45,6 +45,10 @@ async def __process_folder(folder_files, neo_config):
     parse_output_uris = list(filter(__is_parse_output_uri, folder_files))
     source_text_uris = list(filter(lambda uri: uri.endswith('source.txt'), folder_files))
 
+    if not parse_output_uris:
+        log_msg('No parse output files found for output folder. Skipping.')
+        return
+
     if len(source_text_uris) == 0:
         log_msg(f'No source text files found for output folder. Will default to output chunk URIs being saved as entity/relationship sources.')
         for file_uri in folder_files:
