@@ -126,7 +126,7 @@ textarea {
     text-align: right;
 }
 
-.navigation .link + .link {
+.navigation .link+.link {
     margin-left: 2ch;
 }
 
@@ -170,7 +170,7 @@ textarea {
     cursor: pointer;
 }
 
-.link-primary + .link-primary {
+.link-primary+.link-primary {
     margin-left: 1rem;
 }
 
@@ -271,13 +271,23 @@ textarea {
 }
 
 @-webkit-keyframes spin {
-    0% { -webkit-transform: rotate(0deg); }
-    100% { -webkit-transform: rotate(360deg); }
+    0% {
+        -webkit-transform: rotate(0deg);
+    }
+
+    100% {
+        -webkit-transform: rotate(360deg);
+    }
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* Model selector */
@@ -453,4 +463,8 @@ textarea {
 
 #prompt-override-text {
     border: 1px solid #999;
+}
+
+body div:last-child {
+    margin-bottom: 3rem;
 }

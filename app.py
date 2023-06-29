@@ -1,12 +1,12 @@
-import argparse
 import asyncio
 import json
 
 import sentry_sdk
 from sentry_sdk.integrations.quart import QuartIntegration
 
-from quart import Quart, request, jsonify, render_template, Response, make_response
+from quart import Quart, request, jsonify, render_template, make_response
 
+import aws
 import batch
 import parse
 import save
@@ -14,17 +14,17 @@ import utils
 from utils import log_msg
 
 
-# sentry_sdk.init(
-#     dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
-#     integrations=[
-#         QuartIntegration(),
-#     ],
+sentry_sdk.init(
+    dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
+    integrations=[
+        QuartIntegration(),
+    ],
 
-#     # Set traces_sample_rate to 1.0 to capture 100%
-#     # of transactions for performance monitoring.
-#     # Sentry recommends adjusting this value in production.
-#     traces_sample_rate=1.0
-# )
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # Sentry recommends adjusting this value in production.
+    traces_sample_rate=1.0
+)
 
 
 app = Quart(__name__)
@@ -185,7 +185,14 @@ async def batch_log():
                 else:
                     yield f'data:nodata\n\n'
                     file.seek(current_position)
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(1)
+
+            # Yield any remaining lines
+            line = file.readline().rstrip()
+            while line:
+                yield f'data:{line}\n\n'
+                line = file.readline().rstrip()
+
             yield f'data:done\n\n'
 
     response = await make_response(
@@ -224,6 +231,7 @@ async def server_setup():
     log_msg('Logger initialized')
 
     __handle_neo_credential_overrides()
+    aws.check_for_env_vars(throw_if_missing=False)
 
 
 if __name__ == '__main__':

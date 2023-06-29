@@ -7,7 +7,7 @@ import boto3
 
 from utils import log_msg
 
-from .common import parse_s3_uri
+from .uri import parse_s3_uri
 
 
 def get_objects_at_s3_uri(uri):

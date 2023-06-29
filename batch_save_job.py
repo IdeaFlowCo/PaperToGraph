@@ -85,8 +85,12 @@ async def __process_file(file_uri, neo_config, source_text_uri=None):
 
 
 async def save_to_neo4j(data_source, neo_config):
+    # Standardize on s3:// URIs within batch code.
+    data_source = aws.http_to_s3_uri(data_source)
+
     log_msg(f'Running batch save job for {data_source}')
     input_files_by_folder = await __find_input_files(data_source)
+
     for folder_key in input_files_by_folder:
         folder_files = input_files_by_folder[folder_key]
         log_msg(f'Processing {len(folder_files)} files from folder {folder_key}')
@@ -106,7 +110,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     neo_config = utils.neo_config_from_args_or_env(args)
-    aws.check_for_aws_env_vars()
+    aws.check_for_env_vars()
 
     asyncio.run(
         save_to_neo4j(args.data_source, neo_config)

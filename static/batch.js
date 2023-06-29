@@ -7,6 +7,11 @@
     const submitJobButton = document.querySelector('#btn-submit-job');
     const cancelJobButton = document.querySelector('#btn-cancel-job');
 
+    const inputErrorMsg = document.querySelector('#input-error-msg');
+    const genericErrorMsg = document.querySelector('#generic-error-msg');
+    const submitSuccessMsg = document.querySelector('#submit-success-msg');
+    const jobCompleteMsg = document.querySelector('#job-complete-msg');
+
     const handleJobTypeChange = () => {
         const selectedJobType = document.querySelector('input[name="job-type"]:checked').value;
         if (selectedJobType === 'parse') {
@@ -67,14 +72,14 @@
             if (overrideParseOutput.checked) {
                 extraArgs['output_uri'] = document.querySelector('#parse-output-uri').value;
             }
-            if (overridePromptCheckbox.checked) { 
+            if (overridePromptCheckbox.checked) {
                 extraArgs['prompt'] = document.querySelector('#parse-prompt-text').value;
             }
         } else if (jobType === 'save') {
             if (overrideNeoUri.checked) {
                 extraArgs['neo_uri'] = document.querySelector('#neo-uri').value;
             }
-            if (overrideNeoUser.checked) { 
+            if (overrideNeoUser.checked) {
                 extraArgs['neo_user'] = document.querySelector('#neo-user').value;
             }
             if (overrideNeoPass.checked) {
@@ -88,12 +93,17 @@
     const jobLogs = document.querySelector('#job-logs');
     let jobLogEventStream = null;
     const streamJobLogs = () => {
+        jobLogs.innerHTML = '';
         jobLogEventStream = new EventSource('batch-log');
         jobLogEventStream.onmessage = (event) => {
             console.log(event);
             const eventData = event.data.trim();
             if (eventData === 'done') {
                 jobLogEventStream.close();
+                cancelJobButton.disabled = true;
+                submitJobButton.disabled = false;
+                submitSuccessMsg.classList.add('hidden');
+                jobCompleteMsg.classList.remove('hidden');
                 return;
             }
             if (eventData != 'nodata') {
@@ -104,16 +114,13 @@
         }
     }
 
-    const inputErrorMsg = document.querySelector('#input-error-msg');
-    const genericErrorMsg = document.querySelector('#generic-error-msg');
-    const successMsg = document.querySelector('#success-msg');
-
 
     const handleSubmitClick = async () => {
         // Hide any messages from previous attempts
         inputErrorMsg.classList.add('hidden');
         genericErrorMsg.classList.add('hidden');
-        successMsg.classList.add('hidden');
+        submitSuccessMsg.classList.add('hidden');
+        jobCompleteMsg.classList.add('hidden');
 
         // Disable submit button
         submitJobButton.disabled = true;
@@ -126,13 +133,13 @@
             },
             body: JSON.stringify(buildSubmitBody())
         });
-        
+
         try {
             const parsedResponse = await response.json();
             console.log('Received submit response:', parsedResponse);
 
             if (response.ok) {
-                successMsg.classList.remove('hidden');
+                submitSuccessMsg.classList.remove('hidden');
                 jobInfo.classList.remove('hidden');
                 cancelJobButton.disabled = false;
                 streamJobLogs();
@@ -226,7 +233,7 @@
     };
     document.addEventListener('DOMContentLoaded', checkJobRunning);
 
-    
+
     const DEFAULT_PARSE_PROMPT = `
 Each user message will be input text to process. Extract the named entities and their relationships from the text provided. The output should be formatted as a JSON object. Each key in the output object should be the name of an extracted entity. Each value should be an object with a key for each relationship and values representing the target of the relationship. Be sure to separate all comma separated entities that may occur in results into separate items in a list. 
 

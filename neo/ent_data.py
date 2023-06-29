@@ -18,7 +18,7 @@ class EntityData:
 
         if not source:
             raise ValueError('Entity source must be supplied')
-        if not aws.is_valid_source_uri(source):
+        if not aws.is_valid_s3_uri(source):
             raise ValueError(f'Invalid entity source URI: {source}')
         self._source_s3, self._source_http = (
             aws.source_uri_to_s3_and_http(source))

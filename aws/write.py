@@ -8,7 +8,7 @@ import boto3
 
 from utils import log_msg
 
-from .common import parse_s3_uri
+from .uri import parse_s3_uri
 
 
 def create_output_dir_for_job(data_source, output_uri, dry_run=False):

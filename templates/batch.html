@@ -5,11 +5,11 @@
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-MD6L3WYG0S"></script>
     <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
 
-    gtag('config', 'G-MD6L3WYG0S');
+        gtag('config', 'G-MD6L3WYG0S');
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -36,7 +36,7 @@
         <h2 class="title">Launch new batch job</h2>
 
         <span class="label">Data source</span>
-        <input id="data-source" class="text-input"/>
+        <input id="data-source" class="text-input" />
 
         <span class="label">Type of job to run</span>
         <div class="model-selection">
@@ -56,7 +56,7 @@
                 <input type="radio" id="model2" name="model-select" value="gpt-4">
                 <label for="model2">GPT 4</label><br>
             </div>
-            
+
             <div class="override-check">
                 <input type="checkbox" id="dry-run">
                 <label for="dry-run">Dry run</label>
@@ -124,21 +124,21 @@
     <div id="generic-error-msg" class="error-msg hidden">
         Error creating or running batch job. Please check your inputs and try again.
     </div>
-    <div id="success-msg" class="success-msg hidden">
+    <div id="submit-success-msg" class="success-msg hidden">
         Batch job submitted successfully.
     </div>
 
     <div class="hidden" id="job-info">
-        <div class="info-msg">Job currently running</div>
+        <div class="info-msg">Batch job info</div>
         <span class="label">Job logs</span>
         <pre id="job-logs"></pre>
         <button class="link link-primary" id="btn-cancel-job" disabled>Cancel job</button>
     </div>
+    <div id="job-complete-msg" class="success-msg hidden">
+        Batch job completed.
+    </div>
 
-    <script
-    src="https://js.sentry-cdn.com/4226949e3a1d4812b5c26d55888d470d.min.js"
-    crossorigin="anonymous"
-    ></script>
+    <script src="https://js.sentry-cdn.com/4226949e3a1d4812b5c26d55888d470d.min.js" crossorigin="anonymous"></script>
     <script src="{{ url_for('static', filename='batch.js') }}"></script>
 </body>
 
