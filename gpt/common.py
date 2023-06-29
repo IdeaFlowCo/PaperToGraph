@@ -85,7 +85,12 @@ async def async_fetch_from_openai(
                 max_tokens=max_tokens,
                 temperature=0.5
             )
-    except openai.error.RateLimitError:
+    except openai.error.RateLimitError as err:
+        if 'exceeded your current quota' in err.__str__():
+            log_msg('Quota exceeded error from OpenAI')
+            log_msg('Abandoning this request and letting error bubble up since it will not resolve itself.')
+            raise err
+
         log_msg('Rate limit error from OpenAI')
         # Worst case rate limit is 60 requests-per-minute, 60,000 tokens-per-minute, per rate limit docs.
         # https://platform.openai.com/docs/guides/rate-limits/overview
