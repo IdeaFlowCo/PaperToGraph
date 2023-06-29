@@ -254,8 +254,13 @@ An acceptable output would be:
 If no entities or relationships can be extracted from the text provided, respond with NO_ENTITIES_FOUND. Responses should consist only of the extracted data in JSON format, or the string NO_ENTITIES_FOUND.
 `;
 
-    const setDefaultOverridePrompt = () => {
-        document.querySelector('#parse-prompt-text').value = DEFAULT_PARSE_PROMPT.trim();
+    const setDefaultOverridePrompt = async () => {
+        const response = await fetch('parse-prompt', {
+            method: 'GET',
+        });
+
+        const parsedResponse = await response.json();
+        document.querySelector('#parse-prompt-text').value = parsedResponse['prompt'].trim();
     }
     document.addEventListener('DOMContentLoaded', setDefaultOverridePrompt);
 })();

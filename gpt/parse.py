@@ -16,33 +16,29 @@ from .text import get_token_length
 
 
 PARSE_SM_TEMPLATE = (
-    'Each user message will be input text to process. '
-    'Extract the named entities and their relationships from the text provided. '
-    'The output should be formatted as a JSON object. Each key in the output object should be the name of an extracted entity. '
-    'Each value should be an object with a key for each relationship and values representing the target of the relationship. '
-    'Be sure to separate all comma separated entities that may occur in results into separate items in a list. '
-    'Add a special field on the output of every node, _ENTITY_TYPE, that classifies the extracted entity as a '
-    'Drug, Disease, or something else (in which case say: Other). '
+    "In the user message, there will be text to process. I'd like you to do the following steps:"
+    '\n'
+    '\n1. Find named entities in the text. The entities could be Drugs, Diseases, or Other entities.'
+    '\n2. Identify relationships between these entities.'
+    "\n3. Format your findings as a JSON object where each key is an entity and each value is another object that describes the entity's "
+    "relationships and entity type. If an entity has more than one relationship, make sure to list each one separately. Also, if a single "
+    "relationship points to multiple entities, list those entities in an array."
+    '\n4. For every entity, add a special field called "_ENTITY_TYPE" that classifies the entity as either a Drug, Disease, or Other.'
+    '\n5. If an entity name includes an abbreviation, treat the abbreviation as a separate entity. The abbreviation should have a '
+    'relationship "abbreviation of" pointing to the full name, and the full-named entity should have a relationship "abbreviation" pointing '
+    'to the abbreviation.'
     '\n\n'
-    "In addition, if any entity's name includes an abbreviation, include the abbreviation as a separate entity with a special relationship "
-    '"abbreviation of" pointing to the full name of the entity. The entity with the full name should have a special relationship '
-    '"abbreviation", whose target is the abbreviated name. '
-    '\n\n'
-    'For example, if provided the following input:'
-    '\n```\n'
-    '{sample_input}'
-    '\n```\n'
-    'An acceptable output would be:'
+    'For example, if the text is: "{sample_input}", an output could look like this:'
     '\n```\n'
     '{sample_output}'
     '\n```\n'
     '\n'
-    'If no entities or relationships can be extracted from the text provided, respond with {none_found}. '
-    'Responses should consist only of the extracted data in JSON format, or the string {none_found}.')
+    "If you can't find any entities or relationships in the text, please respond with the phrase \"{none_found}\". "
+    'Your response should only contain the JSON data of extracted entities and relationships, or the phrase "{none_found}".')
 
 SAMPLE_PARSE_INPUT = (
     "Tom Currier is a great guy who built lots of communities after he studied at Stanford University (SU) and Harvard. "
-    "He also won the Thiel Fellowship. ")
+    "He also won the Thiel Fellowship.")
 SAMPLE_PARSE_OUTPUT = (
     '{'
     '\n"Tom Currier": {'
@@ -136,6 +132,13 @@ def get_timeout_limit(model):
         return 90
     else:
         return 60
+
+
+def get_default_parse_prompt():
+    '''
+    Returns default prompt for parse query.
+    '''
+    return PARSE_SYSTEM_MESSAGE['content']
 
 
 async def async_fetch_parse(text: str, model="gpt-3.5-turbo", skip_on_error=False, prompt_override=None, return_source=False):

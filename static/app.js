@@ -18,17 +18,17 @@ const saveErrorMsg = document.querySelector('#save-error');
 
 
 function buildBodyForTranslate() {
-    const model_selection = document.querySelector('input[name="model-select"]:checked')
-    const model = model_selection?.value ?? 'any';
-    const text = translateInput.value;
-    const body = {
-      'model': model,
-      'text': text,
-    };
-    if (overridePromptCheckbox.checked) {
-      body['prompt_override'] = overridePromptInput.value;
-    }
-    return body;
+  const model_selection = document.querySelector('input[name="model-select"]:checked')
+  const model = model_selection?.value ?? 'any';
+  const text = translateInput.value;
+  const body = {
+    'model': model,
+    'text': text,
+  };
+  if (overridePromptCheckbox.checked) {
+    body['prompt_override'] = overridePromptInput.value;
+  }
+  return body;
 }
 
 function showSpinnerForTranslate() {
@@ -38,7 +38,7 @@ function showSpinnerForTranslate() {
   // Show spinner
   translateSpinner.style.display = 'block';
   // Disable Save to Neo4j button
- saveToNeoBtn.disabled = true;
+  saveToNeoBtn.disabled = true;
 }
 
 function hideSpinnerForTranslate() {
@@ -53,33 +53,33 @@ function hideSpinnerForTranslate() {
 
 
 async function handleRawParseClick() {
-    translateErrorMsg.style.display = 'none';
-    showSpinnerForTranslate();
+  translateErrorMsg.style.display = 'none';
+  showSpinnerForTranslate();
 
-    const response = await fetch('raw-parse', {
-        method: 'POST',
-        mode: 'cors',
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(buildBodyForTranslate())
-      });
+  const response = await fetch('raw-parse', {
+    method: 'POST',
+    mode: 'cors',
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(buildBodyForTranslate())
+  });
 
-    try {
-      const parsedResponse = await response.json();
-      console.log('Parsed response json:', parsedResponse);
+  try {
+    const parsedResponse = await response.json();
+    console.log('Parsed response json:', parsedResponse);
 
-      const output = parsedResponse.translation;
-      translateOutput.value = JSON.stringify(output, null, 2);
+    const output = parsedResponse.translation;
+    translateOutput.value = JSON.stringify(output, null, 2);
 
-      hideSpinnerForTranslate();
+    hideSpinnerForTranslate();
 
-    } catch (e) {
-      hideSpinnerForTranslate();
-      translateErrorMsg.style.display = 'block';
+  } catch (e) {
+    hideSpinnerForTranslate();
+    translateErrorMsg.style.display = 'block';
 
-      console.error(e);
-    }
+    console.error(e);
+  }
 }
 rawParseButton.addEventListener("click", handleRawParseClick);
 
@@ -111,43 +111,28 @@ function calcInputWordCount() {
   wordCountLabel.innerText = `Word count: ${wordCount}`
 }
 
-const DEFAULT_PARSE_PROMPT = `
-Each user message will be input text to process. Extract the named entities and their relationships from the text provided. The output should be formatted as a JSON object. Each key in the output object should be the name of an extracted entity. Each value should be an object with a key for each relationship and values representing the target of the relationship. Be sure to separate all comma separated entities that may occur in results into separate items in a list.
+const setDefaultOverridePrompt = async () => {
+  const response = await fetch('parse-prompt', {
+    method: 'GET',
+  });
 
-For example, if provided the following input:
-\`\`\`
-Tom Currier is a great guy who built lots of communities after he studied at Stanford and Harvard. He also won the Thiel fellowship. 
-\`\`\`
-An acceptable output would be:
-\`\`\`
-{
-  "Tom Currier": {
-    "studied at": ["Stanford", "Harvard"],
-    "winner of": "Thiel Fellowship"
-  }
-}
-\`\`\`
-
-If no entities or relationships can be extracted from the text provided, respond with NO_ENTITIES_FOUND. Responses should consist only of the extracted data in JSON format, or the string NO_ENTITIES_FOUND.
-`;
-
-const setDefaultOverridePrompt = () => {
-  overridePromptInput.value = DEFAULT_PARSE_PROMPT.trim();
+  const parsedResponse = await response.json();
+  overridePromptInput.value = parsedResponse['prompt'].trim();
 }
 
 const handlePromptOverrideCheck = () => {
-    const checkbox = document.querySelector('#override-prompt');
-    const overrideInputContainer = document.querySelector('#override-prompt-container');
+  const checkbox = document.querySelector('#override-prompt');
+  const overrideInputContainer = document.querySelector('#override-prompt-container');
 
-    if (checkbox.checked) {
-        overrideInputContainer.style.display = 'block';
-        setDefaultOverridePrompt();
-    } else {
-        overrideInputContainer.style.display = 'none';
-    }
+  if (checkbox.checked) {
+    overrideInputContainer.style.display = 'block';
+    setDefaultOverridePrompt();
+  } else {
+    overrideInputContainer.style.display = 'none';
+  }
 };
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   overridePromptCheckbox.addEventListener('change', handlePromptOverrideCheck);
   translateInput.value = translateInput.value.trim();
   calcInputTextLength();
@@ -159,19 +144,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 const currentTheme = localStorage.getItem("theme");
 if (currentTheme == "dark") {
-    document.getElementById('toggleknop').innerHTML = '<i class="fas fa-sun" id="zon" style="color:#d8c658;"></i>';
-    document.body.classList.add("dark-theme");
+  document.getElementById('toggleknop').innerHTML = '<i class="fas fa-sun" id="zon" style="color:#d8c658;"></i>';
+  document.body.classList.add("dark-theme");
 }
 
 function changeTheme() {
-    document.body.classList.toggle("dark-theme");
-    
-    document.getElementById('toggleknop').innerHTML = '<i class="fas fa-moon" id="maan" style="color:#737eac;"></i>';
+  document.body.classList.toggle("dark-theme");
 
-    let theme = "light";
-    if (document.body.classList.contains("dark-theme")) {
-        document.getElementById('toggleknop').innerHTML = '<i class="fas fa-sun" id="zon" style="color:#d8c658;"></i>';
-        theme = "dark";
-    }
-    localStorage.setItem("theme", theme);
+  document.getElementById('toggleknop').innerHTML = '<i class="fas fa-moon" id="maan" style="color:#737eac;"></i>';
+
+  let theme = "light";
+  if (document.body.classList.contains("dark-theme")) {
+    document.getElementById('toggleknop').innerHTML = '<i class="fas fa-sun" id="zon" style="color:#d8c658;"></i>';
+    theme = "dark";
+  }
+  localStorage.setItem("theme", theme);
 }

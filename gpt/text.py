@@ -66,6 +66,20 @@ def get_token_length(text, model='gpt-3.5-turbo'):
     return len(text_as_tokens)
 
 
+def __split_paragraph_to_token_size(paragraph: str, token_limit: int, model='gpt-3.5-turbo'):
+    encoding = tiktoken.encoding_for_model(model)
+    text_as_tokens = encoding.encode(paragraph)
+    text_chunks = []
+    # Make each chunk 10 tokens smaller than the limit, to leave some room for error
+    chunk_size = token_limit - 10
+    while len(text_as_tokens) > token_limit:
+        token_chunk = text_as_tokens[:chunk_size]
+        text_chunks.append(encoding.decode(token_chunk))
+        text_as_tokens = text_as_tokens[chunk_size:]
+    text_chunks.append(encoding.decode(text_as_tokens))
+    return text_chunks
+
+
 def split_to_token_size(text: str, token_limit: int, model='gpt-3.5-turbo'):
     text = normalize_line_endings(text)
 
@@ -75,34 +89,34 @@ def split_to_token_size(text: str, token_limit: int, model='gpt-3.5-turbo'):
     # Split by paragraphs first
     paragraph_chunks = list(filter(lambda x: x != '', text.split('\n\n')))
 
-    # Any paragraph that is too long, split by sentences
     text_chunks = []
     for chunk in paragraph_chunks:
-        if token_length(chunk) > token_limit:
-            # Split by sentences
-            sentences = chunk.split('. ')
-            new_chunk = ''
-            for sentence in sentences:
-                if token_length(new_chunk) + token_length(sentence) < token_limit:
-                    new_chunk += sentence + '. '
-                else:
-                    text_chunks.append(new_chunk)
-                    new_chunk = sentence + '. '
-            text_chunks.append(new_chunk)
+        if token_length(chunk) < token_limit:
+            # If paragraph is small enough, just add it to the list
+            # Add back the double newline that was removed by the split for use in rechunking logic below
+            text_chunks.append(chunk + '\n\n')
         else:
-            text_chunks.append(chunk)
+            # Further split any paragraph that is too long into chunks using token boundaries
+            chunks_for_paragraph = __split_paragraph_to_token_size(chunk, token_limit, model=model)
+            text_chunks.extend(chunks_for_paragraph)
 
     # Try to recombine chunks that are smaller than they need to be
     rechunked_text = [text_chunks[0]]
     i = 0
     j = 1
     while j < len(text_chunks):
+        if not rechunked_text[i].endswith('\n\n'):
+            # Don't try to recombine any chunk that wasn't its own paragraph
+            rechunked_text.append(text_chunks[j])
+            i += 1
+            j += 1
+            continue
         if token_length(rechunked_text[i]) + token_length(text_chunks[j]) < token_limit:
-            rechunked_text[i] = rechunked_text[i] + '\n\n' + text_chunks[j]
+            rechunked_text[i] = rechunked_text[i] + text_chunks[j]
             j += 1
         else:
-            i += 1
             rechunked_text.append(text_chunks[j])
+            i += 1
             j += 1
 
     log_msg(f'Split into {len(rechunked_text)} blocks of text')

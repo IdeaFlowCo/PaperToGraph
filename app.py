@@ -8,6 +8,7 @@ from quart import Quart, request, jsonify, render_template, make_response
 
 import aws
 import batch
+import gpt
 import parse
 import save
 import utils
@@ -79,6 +80,13 @@ async def raw_parse():
         return response
     else:
         return jsonify(__wrong_payload_response(), 400)
+
+
+@app.route('/parse-prompt')
+async def get_parse_prompt():
+    log_msg('GET request to /parse-prompt endpoint')
+    prompt = gpt.get_default_parse_prompt()
+    return jsonify({'prompt': prompt})
 
 
 @app.route("/save-to-neo", methods=["POST"])

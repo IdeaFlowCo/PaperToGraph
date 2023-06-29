@@ -3,6 +3,7 @@ import asyncio
 import json
 
 import aws
+import gpt
 import parse
 import utils
 from utils import log_msg
@@ -91,10 +92,16 @@ class BatchParseJob:
             log_msg(f'Would have written job args to {job_args_uri}')
             return
 
+        if self.prompt_override:
+            parse_prompt = self.prompt_override
+        else:
+            parse_prompt = gpt.get_default_parse_prompt()
+
         job_args = {
             'data_source': data_source,
             'output_uri': output_uri_arg,
             'gpt_model': self.gpt_model,
+            'parse_prompt': parse_prompt,
         }
         job_args = json.dumps(job_args, indent=2)
         aws.write_to_s3_file(job_args_uri, job_args)
