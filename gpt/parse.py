@@ -5,14 +5,14 @@ All GPT-specific code used for parsing entities and relationships out of text.
 import os
 import time
 
-
 import openai
 
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
-
 from utils import log_msg
-from gpt.common import async_fetch_from_openai
+
+from .common import async_fetch_from_openai
+from .text import get_token_length
 
 
 PARSE_SM_TEMPLATE = (
@@ -38,13 +38,11 @@ PARSE_SM_TEMPLATE = (
     '\n```\n'
     '\n'
     'If no entities or relationships can be extracted from the text provided, respond with {none_found}. '
-    'Responses should consist only of the extracted data in JSON format, or the string {none_found}.'
-)
+    'Responses should consist only of the extracted data in JSON format, or the string {none_found}.')
 
 SAMPLE_PARSE_INPUT = (
     "Tom Currier is a great guy who built lots of communities after he studied at Stanford University (SU) and Harvard. "
-    "He also won the Thiel Fellowship. "
-)
+    "He also won the Thiel Fellowship. ")
 SAMPLE_PARSE_OUTPUT = (
     '{'
     '\n"Tom Currier": {'
@@ -67,10 +65,10 @@ NO_ENTITIES_MARKER = 'NO_ENTITIES_FOUND'
 
 
 PARSE_SYSTEM_MESSAGE = {
-    "role": "system", 
+    "role": "system",
     "content": PARSE_SM_TEMPLATE.format(
         sample_input=SAMPLE_PARSE_INPUT, sample_output=SAMPLE_PARSE_OUTPUT, none_found=NO_ENTITIES_MARKER)
-    }
+}
 
 
 def get_output_reservation(model):
@@ -93,18 +91,18 @@ def get_output_reservation(model):
         return 1600
 
 
-def get_text_size_limit(model):
+def get_text_token_limit(model):
     '''
-    Returns desired length of text to be parsed, in number of characters, based on model to be used.
+    Returns desired length of text to be parsed, in number of tokens, based on model to be used.
     '''
     # Different models have different max context sizes, where "context size" is the total number of tokens
     # used in the completion request, inclduding all of: the prompt in the system message, the text to be parsed,
     # and the reesrvation for the output.
     # Can check token length using https://platform.openai.com/tokenizer
 
-    # The default parse prompt sent as system message is 431 tokens; round up to 450 to be safe.
-    parse_prompt_tokens = 450
-    
+    # The number of tokens in the system message prompt.
+    parse_prompt_tokens = get_token_length(PARSE_SYSTEM_MESSAGE['content'])
+
     # Can see max context size for different models here: https://platform.openai.com/docs/models/overview
     if model == 'gpt-3.5-turbo-16k':
         max_context_tokens = 16384
@@ -113,15 +111,25 @@ def get_text_size_limit(model):
     else:
         max_context_tokens = 4096
 
+    # The number of tokens to reserve for the output.
     output_reservation = get_output_reservation(model)
 
-    # Leave ourselves a margin of error based off empirical testing.
-    margin_of_error = 400
+    # Leave ourselves a margin of error, just to be safe.
+    margin_of_error = 100
+
+    tokens_for_input = max_context_tokens - parse_prompt_tokens - output_reservation - margin_of_error
+
+    return tokens_for_input
+
+
+def get_text_size_limit(model):
+    '''
+    Returns desired length of text to be parsed, in number of characters, based on model to be used.
+    '''
+    tokens_for_input = get_text_token_limit(model)
 
     # Each token is about 3-4 characters for freeform text (e.g. the text to be parsed, which is what we're sizing here).
     chars_per_token = 3.5
-    
-    tokens_for_input = max_context_tokens - parse_prompt_tokens - output_reservation - margin_of_error
 
     return int(tokens_for_input * chars_per_token)
 
@@ -135,7 +143,7 @@ def get_timeout_limit(model):
         return 60
 
 
-async def async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False, prompt_override=None, return_source=False):
+async def async_fetch_parse(text: str, model="gpt-3.5-turbo", skip_on_error=False, prompt_override=None, return_source=False):
     '''
     Retrieve parse response from GPT for given block of text.
     '''
@@ -144,7 +152,7 @@ async def async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False
 
     if prompt_override:
         system_message = {
-            "role": "system", 
+            "role": "system",
             "content": prompt_override
         }
     else:
@@ -171,13 +179,11 @@ async def async_fetch_parse(text:str, model="gpt-3.5-turbo", skip_on_error=False
         return parse_result
 
 
-
-
 # ***********
 # Legacy code
 # ***********
 
-def fetch_parse_sequentially(text:str, prev_context=None, model="gpt-3.5-turbo"):
+def fetch_parse_sequentially(text: str, prev_context=None, model="gpt-3.5-turbo"):
     '''
     Legacy code for parsing a text block sequentially through GPT.
 

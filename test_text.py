@@ -1,5 +1,4 @@
-import text
-
+from gpt import text
 
 
 def test_split_to_size(input):
@@ -14,7 +13,6 @@ def test_split_to_size(input):
     print('Length of each chunk:')
     for chunk in split_input:
         print(len(chunk))
-
 
 
 SAMPLE_LONG_INPUT = """

@@ -3,26 +3,26 @@ Functions for parsing text into maps of entities and relationships.
 '''
 
 import gpt
+from gpt import is_text_oversized, split_to_size, split_to_token_size
 from utils import log_msg
 import tasks
-from text import is_text_oversized, split_to_size
 
 
 async def parse_with_gpt(text: str, model="gpt-3.5-turbo"):
     '''
     Splits provided text into smaller pieces and parses each piece in parallel using GPT.
     '''
-    text_limit = gpt.parse.get_text_size_limit(model)
-    log_msg(f'Splitting input text into chunks of {text_limit} characters.')
-    text_chunks = split_to_size(text, limit=text_limit)
+    text_token_limit = gpt.parse.get_text_token_limit(model)
+    log_msg(f'Splitting input text into chunks of {text_token_limit} tokens.')
+    text_chunks = split_to_token_size(text, token_limit=text_token_limit, model=model)
     # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
     # this is hopefully acceptable behavior.
     # The benefit is that the total parsing is much more resilient with some fault tolerance.
-    parse_work_fn = lambda chunk: gpt.async_fetch_parse(chunk, model=model, skip_on_error=True)
-    
+    def parse_work_fn(chunk): return gpt.async_fetch_parse(chunk, model=model, skip_on_error=True)
+
     master_parse_task = tasks.create_task_of_tasks(
-        task_inputs=text_chunks, 
-        work_fn=parse_work_fn, 
+        task_inputs=text_chunks,
+        work_fn=parse_work_fn,
         task_label='Parse'
     )
     return await master_parse_task
@@ -32,9 +32,9 @@ async def parse_with_gpt_multitask(text: str, model="gpt-3.5-turbo", prompt_over
     '''
     Splits provided text into smaller pieces and parses each piece in parallel using GPT, yielding results as they come in.
     '''
-    text_limit = gpt.parse.get_text_size_limit(model)
-    log_msg(f'Splitting input text into chunks of {text_limit} characters.')
-    text_chunks = split_to_size(text, limit=text_limit)
+    text_token_limit = gpt.parse.get_text_token_limit(model)
+    log_msg(f'Splitting input text into chunks of {text_token_limit} tokens.')
+    text_chunks = split_to_token_size(text, token_limit=text_token_limit, model=model)
 
     if prompt_override:
         log_msg(f'Using custom parse prompt specified as override:\n{prompt_override}')
@@ -42,16 +42,16 @@ async def parse_with_gpt_multitask(text: str, model="gpt-3.5-turbo", prompt_over
     # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
     # this is hopefully acceptable behavior.
     # The benefit is that the total parsing is much more resilient with some fault tolerance.
-    parse_work_fn = lambda chunk: gpt.async_fetch_parse(
-        chunk, 
-        model=model, 
-        skip_on_error=True, 
+    def parse_work_fn(chunk): return gpt.async_fetch_parse(
+        chunk,
+        model=model,
+        skip_on_error=True,
         prompt_override=prompt_override,
         return_source=True)
 
     async for result in tasks.create_and_run_tasks(
-        task_inputs=text_chunks, 
-        work_fn=parse_work_fn, 
+        task_inputs=text_chunks,
+        work_fn=parse_work_fn,
         task_label='Parse'
     ):
         yield result
@@ -64,20 +64,20 @@ async def async_parse_with_heartbeat(text: str, model="gpt-3.5-turbo", prompt_ov
     log_msg(f'Parsing text using GPT model {model}')
     log_msg('Sending connection heartbeat')
     yield ' '
-    text_limit = gpt.parse.get_text_size_limit(model)
-    log_msg(f'Splitting input text into chunks of {text_limit} characters.')
-    text_chunks = split_to_size(text, limit=text_limit)
+    text_token_limit = gpt.parse.get_text_token_limit(model)
+    log_msg(f'Splitting input text into chunks of {text_token_limit} tokens.')
+    text_chunks = split_to_token_size(text, token_limit=text_token_limit, model=model)
     # Note: an error will make any given chunk be skipped. Because of the large number of parse jobs/chunks looked at,
     # this is hopefully acceptable behavior.
     # The benefit is that the total parsing is much more resilient with some fault tolerance.
-    parse_work_fn = lambda chunk: gpt.async_fetch_parse(chunk, model=model, skip_on_error=True, prompt_override=prompt_override)
+    def parse_work_fn(chunk): return gpt.async_fetch_parse(
+        chunk, model=model, skip_on_error=True, prompt_override=prompt_override)
     async for chunk in tasks.split_and_run_tasks_with_heartbeat(
-        task_inputs=text_chunks, 
-        work_fn=parse_work_fn, 
+        task_inputs=text_chunks,
+        work_fn=parse_work_fn,
         task_label='Parse'
     ):
         yield chunk
-
 
 
 # ***********
@@ -96,7 +96,7 @@ def parse_with_gpt_sequentially(text: str, model="gpt-3.5-turbo"):
     if not is_text_oversized(text):
         parsed = gpt.fetch_parse_sequentially(text, model=model)
         return parsed
-    
+
     text_chunks = split_to_size(text)
     parsed = None
     for chunk in text_chunks:
