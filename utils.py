@@ -9,10 +9,15 @@ BATCH_PARSE_THREAD_NAME = 'p2g-batch-parse'
 BATCH_SAVE_THREAD_NAME = 'p2g-batch-save'
 BATCH_THREAD_NAMES = {BATCH_PARSE_THREAD_NAME, BATCH_SAVE_THREAD_NAME}
 
+ENT_TYPES_THREAD_NAME = 'p2g-ent-types'
+GRAPH_SOURCES_THREAD_NAME = 'p2g-graph-sources'
+SCRIPT_THREAD_NAMES = {ENT_TYPES_THREAD_NAME, GRAPH_SOURCES_THREAD_NAME}
+
 
 def get_logger():
-    if threading.current_thread().name in BATCH_THREAD_NAMES:
-        logger_name = threading.current_thread().name
+    thread_name = threading.current_thread().name
+    if thread_name in BATCH_THREAD_NAMES or thread_name in SCRIPT_THREAD_NAMES:
+        logger_name = thread_name
     else:
         logger_name = 'paper2graph'
     return logging.getLogger(logger_name)
@@ -40,8 +45,7 @@ def log_error(msg: str):
 def setup_logger(name=None, log_file=None, level=logging.INFO):
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    formatter = logging.Formatter(
-        '[%(asctime)s][%(name)s][%(levelname)s] %(message)s')
+    formatter = logging.Formatter('[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s')
 
     if len(logger.handlers) > 0:
         # Logger already exists/has handlers, so don't add any more

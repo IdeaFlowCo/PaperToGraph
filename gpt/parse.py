@@ -161,6 +161,7 @@ async def async_fetch_parse(text: str, model="gpt-3.5-turbo", skip_on_error=Fals
         {"role": "user", "content": text}
     ]
 
+    start_time = time.time()
     parse_result = await async_fetch_from_openai(
         messages,
         log_label='Parse',
@@ -168,8 +169,12 @@ async def async_fetch_parse(text: str, model="gpt-3.5-turbo", skip_on_error=Fals
         max_tokens=max_tokens,
         timeout=timeout,
         skip_on_error=skip_on_error,
-        skip_msg=NO_ENTITIES_MARKER
+        skip_msg=NO_ENTITIES_MARKER,
+        expect_json_result=True
     )
+    end_time = time.time()
+    time_spent = end_time - start_time
+    log_msg(f'Parse results fetched in {time_spent:.2f} seconds.')
 
     if return_source:
         return text, parse_result

@@ -2,6 +2,7 @@
 Shared utility functions frequently used when working with Neo4j.
 '''
 
+import json
 from re import sub
 
 from neo4j import GraphDatabase
@@ -42,13 +43,12 @@ def get_neo4j_driver(neo_config):
     user = neo_config.get('user', 'neo4j')
     password = neo_config.get('password', 'VNfVHsSRzfTZlRRDTDluxFvi6PfLtwkO_5JTxJCV3Mc')
 
-    log_msg('Connecting to Neo4j database with the following parameters:')
-    log_msg(f'uri: {uri}')
-    log_msg(f'user: {user}')
-    if password == 'VNfVHsSRzfTZlRRDTDluxFvi6PfLtwkO_5JTxJCV3Mc':
-        log_msg(f'password: DEFAULT')
-    else:
-        log_msg(f'password: {password[:3]}...{password[-3:]}')
+    params_for_log = {
+        'uri': uri,
+        'user': user,
+        'password': 'DEFAULT' if 'password' not in neo_config else password[:3] + '...' + password[-3:]
+    }
+    log_msg(f'Connecting to Neo4j database with the following parameters:\n{json.dumps(params_for_log, indent=2)}')
 
     # Create a Neo4j driver instance
     return GraphDatabase.driver(uri, auth=(user, password))

@@ -13,6 +13,7 @@ import openai
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
+import utils
 from utils import log_msg, log_debug
 
 
@@ -125,21 +126,39 @@ def get_rl_backoff_time(model):
 
 
 async def async_fetch_from_openai(
-        messages,
-        log_label,
-        model="gpt-3.5-turbo",
-        skip_msg=None,
-        max_tokens=1500,
-        timeout=60,
-        skip_on_error=False,
-        should_retry=True,
-        rate_limit_errors=0):
+    messages,
+    log_label,
+    model="gpt-3.5-turbo",
+    skip_msg=None,
+    max_tokens=1500,
+    timeout=60,
+    retries_remaining=1,
+    rate_limit_errors=0,
+    skip_on_error=False,
+    expect_json_result=False,
+):
     '''
     Common scaffolding code for fetching from OpenAI, with shared logic for different kinds of error handling.
     '''
 
+    # Wrap all parameters into a dictionary so we can pass them around easily
+    params = {
+        'messages': messages,
+        'log_label': log_label,
+        'model': model,
+        'skip_msg': skip_msg,
+        'max_tokens': max_tokens,
+        'timeout': timeout,
+        'skip_on_error': skip_on_error,
+        'retries_remaining': retries_remaining,
+        'rate_limit_errors': rate_limit_errors,
+        'expect_json_result': expect_json_result
+    }
+
+    def log_msg(msg): return utils.log_msg(f'[GPT: {log_label}] {msg}')
+
     try:
-        log_msg(f'Sending {log_label.lower()} request to OpenAI...')
+        log_msg(f'Sending request to OpenAI...')
         async with asyncio.timeout(timeout):
             result = await openai.ChatCompletion.acreate(
                 model=model,
@@ -163,15 +182,8 @@ async def async_fetch_from_openai(
         backoff_time = backoff_time * (2 ** rate_limit_errors)
         await asyncio.sleep(backoff_time)
 
-        return await async_fetch_from_openai(
-            messages,
-            log_label,
-            model=model,
-            max_tokens=max_tokens,
-            skip_on_error=skip_on_error,
-            should_retry=should_retry,
-            rate_limit_errors=rate_limit_errors + 1
-        )
+        params['rate_limit_errors'] = rate_limit_errors + 1
+        return await async_fetch_from_openai(**params)
     except openai.error.InvalidRequestError as err:
         log_msg(f'Invalid request error from OpenAI: {err}')
         # This is probably an issue with context size, which we're not handling yet, so we'll just skip this chunk because
@@ -180,32 +192,20 @@ async def async_fetch_from_openai(
         log_msg('Skipping this chunk.')
         return ''
     except TimeoutError:
-        if should_retry:
-            log_msg(f'{log_label} request timeout. Trying again one more time...')
-            return await async_fetch_from_openai(
-                messages,
-                log_label,
-                model=model,
-                max_tokens=max_tokens,
-                skip_on_error=skip_on_error,
-                should_retry=False
-            )
-        log_msg(f'{log_label} request timed out multiple times.')
+        if retries_remaining > 0:
+            log_msg(f'OpenAI request timeout. Trying again...')
+            params['retries_remaining'] = retries_remaining - 1
+            return await async_fetch_from_openai(**params)
+        log_msg(f'OpenAI request timed out multiple times.')
         if skip_on_error:
             return ''
         raise TimeoutError
     except BaseException as err:
         log_msg(f'Error encountered during OpenAI API call: {err}')
-        if should_retry:
-            log_msg(f'Trying again one more time...')
-            return await async_fetch_from_openai(
-                messages,
-                log_label,
-                model=model,
-                max_tokens=max_tokens,
-                skip_on_error=skip_on_error,
-                should_retry=False
-            )
+        if retries_remaining:
+            log_msg(f'Trying again...')
+            params['retries_remaining'] = retries_remaining - 1
+            return await async_fetch_from_openai(**params)
         if skip_on_error:
             return ''
         raise err
@@ -217,24 +217,22 @@ async def async_fetch_from_openai(
         log_msg(f'OpenAI finish reason: "{result["finish_reason"]}".')
 
     result = result["message"]["content"].strip()
-    log_msg(f'Received {log_label.lower()} response from OpenAI')
+    log_msg(f'Received response from OpenAI')
     log_debug(f'Response data: \n{result}')
     if result == skip_msg:
         log_msg(f'OpenAI returned designated skip message "{skip_msg}". Returning empty string for this block.')
         return ''
+
+    if not expect_json_result:
+        return result
+
     result = clean_json(result)
     log_debug(f'Cleaned response data: \n{result}')
     if result is None:
-        if should_retry:
+        if retries_remaining > 0:
             log_msg("Doesn't look like GPT gave us JSON. Trying again one more time...")
-            return await async_fetch_from_openai(
-                messages,
-                log_label,
-                model=model,
-                max_tokens=max_tokens,
-                skip_on_error=skip_on_error,
-                should_retry=False
-            )
+            params['retries_remaining'] = retries_remaining - 1
+            return await async_fetch_from_openai(**params)
         if skip_on_error:
             log_msg(
                 "Doesn't look like GPT gave us JSON. "

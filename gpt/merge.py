@@ -3,7 +3,7 @@ All GPT-specific code used for merging entity blocks after parsing.
 '''
 
 
-from gpt.common import async_fetch_from_openai
+from .common import async_fetch_from_openai
 
 
 SAMPLE_MERGE_INPUT = (
@@ -51,12 +51,11 @@ MERGE_SYSTEM_MESSAGE_CONTENT = (
     "Remove any entity objects that do not have any relationship properties. Make sure the final result is valid JSON."
     "\n\n"
     "Input: \n" + SAMPLE_MERGE_INPUT + "\n\n"
-    "Output: \n" + SAMPLE_MERGE_OUTPUT + "\n\n"
-)
+    "Output: \n" + SAMPLE_MERGE_OUTPUT + "\n\n")
 MERGE_SYSTEM_MESSAGE = {"role": "system", "content": MERGE_SYSTEM_MESSAGE_CONTENT}
 
 
-async def async_fetch_merge(text:str, model="gpt-3.5-turbo", skip_on_error=False, should_retry=True):
+async def async_fetch_merge(text: str, model="gpt-3.5-turbo", skip_on_error=False, should_retry=True):
     '''
     Retrieve merge response from GPT for given block of text.
     '''
@@ -75,6 +74,7 @@ async def async_fetch_merge(text:str, model="gpt-3.5-turbo", skip_on_error=False
         log_label='Merge',
         model=model,
         max_tokens=max_tokens,
-        skip_on_error=skip_on_error, 
-        should_retry=should_retry
+        skip_on_error=skip_on_error,
+        should_retry=should_retry,
+        expect_json_result=True
     )
