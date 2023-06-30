@@ -5,7 +5,7 @@ import threading
 import gpt
 import neo
 import utils
-from utils import log_msg
+from utils import log_msg, log_debug
 
 
 ENTITY_TYPES = {
@@ -17,22 +17,32 @@ ENTITY_TYPES = {
 
 def get_all_entity_names(neo4j_driver):
     with neo4j_driver.session() as session:
-        result = session.run("MATCH (n:Entity) WHERE n.type IS NULL RETURN n.name LIMIT 400")
+        result = session.run("MATCH (n:Entity) WHERE n.type IS NULL RETURN n.name LIMIT 300")
         return [record['n.name'] for record in result]
 
 
 async def get_entity_types_from_gpt(entity_names, gpt_model):
+    log_debug(entity_names)
     result_str = await gpt.fetch_entity_types(entity_names, model=gpt_model)
+    log_debug(result_str)
 
     # Results should be in the form
     # ("entity name", "entity type")
     name_type_pattern = r'\("(.*?)"\s*,\s*"(.*?)"\)'
     results = re.findall(name_type_pattern, result_str)
 
-    # Only include results where the entity type is in our list of valid types
-    results = [(name, ent_type) for name, ent_type in results if ent_type in ENTITY_TYPES]
+    clean_results = []
+    for result in results:
+        name, ent_type = result
+        # Only want to include results where the entity type is in our list of valid types
+        if ent_type in ENTITY_TYPES:
+            clean_results.append((name, ent_type))
+        elif name in ENTITY_TYPES:
+            # Sometimes GPT gets the tuple order confused
+            clean_results.append((ent_type, name))
+    log_debug(clean_results)
 
-    return results
+    return clean_results
 
 
 def update_entity_types(neo4j_driver, ent_name_type_pairs):
@@ -58,7 +68,9 @@ def update_entity_types(neo4j_driver, ent_name_type_pairs):
 async def main(args):
     thread_name = utils.ENT_TYPES_THREAD_NAME
     threading.current_thread().setName(thread_name)
-    utils.setup_logger(name=thread_name)
+
+    log_level = 'DEBUG' if args.debug else 'INFO'
+    utils.setup_logger(name=thread_name, level=log_level, log_file=args.log_file)
     log_msg('Logger initialized')
 
     neo_config = utils.neo_config_from_args_or_env(args)
@@ -87,6 +99,17 @@ async def main(args):
 def parse_args():
     parser = argparse.ArgumentParser(description='Enrich entity types with GPT')
 
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        default=False,
+        help='Enable debug logging'
+    )
+    parser.add_argument(
+        '--log_file',
+        default=None,
+        help='Mirror logs to a file in addition to stdout'
+    )
     parser.add_argument(
         '--gpt-model',
         default='gpt-3.5-turbo',

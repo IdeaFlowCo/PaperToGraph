@@ -19,7 +19,9 @@ ENT_TYPES_SM_TEMPLATE = (
     "In the user message, there will be a list of entity names. Perform the following steps:"
     '\n'
     '\n1. For each entity, determine if it is a Drugs, Diseases, or Other.'
-    '\n2. List each entity along with its type in an (entity, type) tuple.'
+    '\n2. List each entity along with its type in an ("entity", "type") tuple. '
+    'Make sure there are quotes around each entity name and type. '
+    'Also make sure that each tule is on its own line, and that the entity name always comes first in the tuple.'
     '\n\n'
     'For example, if the provided input is: "{sample_input}", an output could look like this:'
     '\n```\n'
