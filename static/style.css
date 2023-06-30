@@ -362,7 +362,7 @@ textarea {
     margin: auto;
 }
 
-#new-job-controls .title {
+.title {
     font-size: 20px;
     font-weight: 700;
     color: #444;

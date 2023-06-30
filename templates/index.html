@@ -5,11 +5,11 @@
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-MD6L3WYG0S"></script>
     <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
 
-    gtag('config', 'G-MD6L3WYG0S');
+        gtag('config', 'G-MD6L3WYG0S');
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,7 +23,7 @@
 
     <nav class="navigation container">
         <div class="nav-brand">
-            Paper2Graph 
+            Paper2Graph
         </div>
         <div class="spacer"></div>
         <span class="link link-active">Translator</span>
@@ -78,9 +78,7 @@
             Error encountered while trying to extract information. Please try again in a few seconds.
         </div>
 
-        <textarea style="font-family: Arial; text-align: left;"
-             id="output-translate" 
-            contenteditable="true" 
+        <textarea style="font-family: Arial; text-align: left;" id="output-translate" contenteditable="true"
             placeholder="Output of the translation">
         </textarea>
 
@@ -105,11 +103,8 @@
 
     <!-- <footer class="footer" >
     </footer> -->
-    <script
-    src="https://js.sentry-cdn.com/4226949e3a1d4812b5c26d55888d470d.min.js"
-    crossorigin="anonymous"
-    ></script>
-    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    <script src="https://js.sentry-cdn.com/4226949e3a1d4812b5c26d55888d470d.min.js" crossorigin="anonymous"></script>
+    <script src="{{ url_for('static', filename='translate.js') }}"></script>
     <script src="{{ url_for('static', filename='save2neo.js') }}"></script>
 </body>
 
