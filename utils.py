@@ -117,6 +117,6 @@ def neo_config_from_args_or_env(args):
 
 
 def sanitize_gpt_model_choice(model):
-    if model not in ['gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4']:
+    if model not in ['gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-32k']:
         model = 'gpt-3.5-turbo'
     return model

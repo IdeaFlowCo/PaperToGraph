@@ -68,7 +68,10 @@ def clean_json(response):
 
 def get_context_window_size(model):
     # Can see max context size for different models here: https://platform.openai.com/docs/models/overview
-    if model == 'gpt-3.5-turbo-16k':
+    if model == 'gpt-4-32k':
+        # Guessing before this is documented
+        max_context_tokens = 32768
+    elif model == 'gpt-3.5-turbo-16k':
         max_context_tokens = 16384
     elif model == 'gpt-4':
         max_context_tokens = 8192
@@ -81,7 +84,13 @@ def get_context_window_size(model):
 
 def get_max_requests_per_minute(model):
     # All rate limits can be found at https://platform.openai.com/docs/guides/rate-limits/what-are-the-rate-limits-for-our-api
-    if model == 'gpt-4':
+    if model == 'gpt-4-32k':
+        # Guessing at these before they're documented
+        # 200 RPM
+        requests_per_minute_limit = 200.0
+        # 80k TPM
+        tokens_per_minute_limit = 80000.0
+    elif model == 'gpt-4':
         # GPT-4 has extra aggressive rate limiting in place.
         # https://platform.openai.com/docs/guides/rate-limits/gpt-4-rate-limits
         # 200 RPM

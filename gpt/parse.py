@@ -75,7 +75,10 @@ def get_output_reservation(model):
     # extracting/refining data with this query.
     # That said, there's a somewhat high "floor" here because JSON ouptput consumes a lot of tokens for
     # structural characters like {} and ""
-    if model == 'gpt-3.5-turbo-16k':
+    if model == 'gpt-4-32k':
+        # Max context size: 32,000 tokens
+        return 4000
+    elif model == 'gpt-3.5-turbo-16k':
         # Max context size: 16,384 tokens
         return 3000
     elif model == 'gpt-4':
@@ -97,7 +100,7 @@ def get_text_token_limit(model):
     # Can check token length using https://platform.openai.com/tokenizer
 
     # The number of tokens in the system message prompt.
-    parse_prompt_tokens = get_token_length(PARSE_SYSTEM_MESSAGE['content'])
+    parse_prompt_tokens = get_token_length(PARSE_SYSTEM_MESSAGE['content'], model=model)
 
     # The maximum number of tokens in this model's context window.
     max_context_tokens = get_context_window_size(model)
@@ -130,6 +133,8 @@ def get_timeout_limit(model):
         return 75
     elif model == 'gpt-4':
         return 90
+    elif model == 'gpt-4-32k':
+        return 120
     else:
         return 60
 
