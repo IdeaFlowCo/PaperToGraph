@@ -23,19 +23,20 @@ def save_dict_of_entities(neo_driver, data, source=None, timestamp=None):
             continue
         if not isinstance(ent_data, dict):
             log_warn(
-                f'Unexpected value in entity dict for "{ent_name}". Expected dict, got: {type(ent_data)}')
+                f'Unexpected value in entity dict for "{ent_name}". Expected dict of relationships -> targets, got: {type(ent_data)}')
             log_warn(ent_data)
             log_warn("Won't be saving this entity.")
             continue
-        ent = neo.EntityData.from_json_entry(
+        ent = neo.EntityRecord.from_json_entry(
             ent_name, ent_data, source, timestamp)
-        ent.save_to_neo(neo_driver)
-        ent.save_relationships_to_neo(neo_driver)
+        if ent.has_data_to_save():
+            ent.save_to_neo(neo_driver)
+            ent.save_relationships_to_neo(neo_driver)
 
 
 def save_json_data(json_str, source_uri=None, neo_config=None):
     if not source_uri:
-        raise ValueError('Must provide')
+        raise ValueError('Must provide a source URI for the input data.')
     # Ensure save input URI is an HTTP URL for easy access from Neo4j
     source_uri = aws.s3_uri_to_http(source_uri)
 

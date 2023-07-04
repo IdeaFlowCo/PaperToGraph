@@ -1,11 +1,8 @@
-import argparse
-import asyncio
 import json
 import os
 
 import aws
 import save
-import utils
 from utils import log_msg
 
 
@@ -107,23 +104,3 @@ async def save_to_neo4j(data_source, neo_config):
         folder_files = input_files_by_folder[folder_key]
         log_msg(f'Processing {len(folder_files)} files from folder {folder_key}')
         await __process_folder(folder_files, neo_config)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument(
-        '--data_source',
-        default='s3://paper2graph-parse-results',
-        help="The URI for the data to be ingested, like an S3 bucket location."
-    )
-    utils.add_neo_credential_override_args(parser)
-
-    args = parser.parse_args()
-
-    neo_config = utils.neo_config_from_args_or_env(args)
-    aws.check_for_env_vars()
-
-    asyncio.run(
-        save_to_neo4j(args.data_source, neo_config)
-    )

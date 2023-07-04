@@ -96,7 +96,7 @@ async def main(args):
         driver.close()
 
 
-def parse_args():
+def parse_args(args):
     parser = argparse.ArgumentParser(description='Enrich entity types with GPT')
 
     parser.add_argument(
@@ -117,4 +117,4 @@ def parse_args():
     )
     utils.add_neo_credential_override_args(parser)
 
-    return parser
+    return parser.parse_args(args)

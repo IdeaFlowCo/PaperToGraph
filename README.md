@@ -71,5 +71,8 @@ Table of scripts currently available and what they do:
 
 | Script                  | Effect                                                                                                                                                                                     |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `analyze_parse_job_log` | Read a local or remote log file from a batch parse job and calculate useful stats about the run.                                                                                           |
 | `cleanup_graph_sources` | Walk the graph, finding all Nodes and Relationships with a `sources` property set, and update those sources to be HTTP URLs to the S3 objects (as opposed to S3 URIs or AWS console links) |
 | `enrich_entity_types`   | Tags ingested graph entities with a `type` property suggested by GPT.                                                                                                                      |
+| `run_batch_parse_job`   | Run a batch parse job from the command line, mirroring the UX available on the web server's `/batch` page.                                                                                 |
+| `run_batch_save_job`    | Run a batch save job from the command line, mirroring the UX available on the web server's `/batch` page.                                                                                  |

@@ -16,25 +16,43 @@ from .text import get_token_length
 
 
 PARSE_SM_TEMPLATE = (
-    "In the user message, there will be text to process. I'd like you to do the following steps:"
-    '\n'
-    '\n1. Find named entities in the text. The entities could be Drugs, Diseases, or Other entities.'
-    '\n2. Identify relationships between these entities.'
-    "\n3. Format your findings as a JSON object where each key is an entity and each value is another object that describes the entity's "
-    "relationships and entity type. If an entity has more than one relationship, make sure to list each one separately. Also, if a single "
-    "relationship points to multiple entities, list those entities in an array."
-    '\n4. For every entity, add a special field called "_ENTITY_TYPE" that classifies the entity as either a Drug, Disease, or Other.'
-    '\n5. If an entity name includes an abbreviation, treat the abbreviation as a separate entity. The abbreviation should have a '
-    'relationship "abbreviation of" pointing to the full name, and the full-named entity should have a relationship "abbreviation" pointing '
-    'to the abbreviation.'
+    "The user message will contain a block of text drawn from a scientific paper. "
+    "Please analyze this text and perform the following steps:"
     '\n\n'
-    'For example, if the text is: "{sample_input}", an output could look like this:'
-    '\n```\n'
+    '1. Extract Named Entities: '
+    'Identify named entities in the text which could be of three types - Drug, Disease, or Other. '
+    'An entity should be a single proper noun or a term that is clearly defined within the scope of Drugs and Diseases. '
+    'Entity names should be short and focused, containing no more than 5 essential words. '
+    'If an entity name cannot be expressed in 5 words or less, it should be ignored. '
+    '\n\n'
+    '2. Map Relationships: '
+    'Establish relationships between these entities, based on their context in the text. '
+    'Relationships should have short, descriptive names that do not include other nouns. '
+    'If a relationship name cannot be expressed in 5 words or less, it should be ignored. '
+    '\n\n'
+    '3. Handle Abbreviations: '
+    'If an entity name in the text has an abbreviation, treat the abbreviation as a distinct entity. The '
+    'abbreviation should be linked to the full name via a "abbreviation of" relationship, and vice versa, the full name should '
+    'have an "abbreviation" relationship with the abbreviation.'
+    '\n\n'
+    '4. Format Findings: '
+    'Organize your findings as a JSON object. In this object, each key should be a named entity, and '
+    'its corresponding value should be another object. This nested object should describe the relationships of '
+    'the entity (each relationship should be a separate key), the related entities (as an array of values if multiple '
+    'entities are involved), and the entity type. '
+    '\n\n'
+    'Please include an additional key, \"_ENTITY_TYPE\", to classify the entity as either "Drug", "Disease", or "Other".'
+    '\n\n'
+    "Here's an illustrative example. For a text like: \"{sample_input}\", the output could be:"
+    '\n\n'
     '{sample_output}'
-    '\n```\n'
-    '\n'
-    "If you can't find any entities or relationships in the text, please respond with the phrase \"{none_found}\". "
-    'Your response should only contain the JSON data of extracted entities and relationships, or the phrase "{none_found}".')
+    '\n\n'
+    'Responses must always be valid JSON objects. Make sure that all keys in both the top-level object and any nested '
+    'objects have valid JSON values. '
+    '\n\n'
+    'If no entities or relationships are identifiable in the given text, respond with the phrase "{none_found}". Ensure '
+    'that your response is exclusively the JSON data of extracted entities and relationships, or '
+    'the phrase "{none_found}".')
 
 SAMPLE_PARSE_INPUT = (
     "Tom Currier is a great guy who built lots of communities after he studied at Stanford University (SU) and Harvard. "
@@ -52,7 +70,7 @@ SAMPLE_PARSE_OUTPUT = (
     '\n  "_ENTITY_TYPE": "Other"'
     '\n},'
     '\n"SU": {'
-    '\n  "abbreviation of": ["Stanford University"],'
+    '\n  "abbreviation of": "Stanford University",'
     '\n  "_ENTITY_TYPE": "Other"'
     '\n},'
     '\n}'
@@ -77,13 +95,13 @@ def get_output_reservation(model):
     # structural characters like {} and ""
     if model == 'gpt-4-32k':
         # Max context size: 32,000 tokens
-        return 4000
+        return 8000
     elif model == 'gpt-3.5-turbo-16k':
         # Max context size: 16,384 tokens
-        return 3000
+        return 6000
     elif model == 'gpt-4':
         # Max context size: 8,192 tokens
-        return 2000
+        return 3000
     else:
         # Asssuming GPT-3.5-turbo
         # Max context size: 4,096 tokens
@@ -130,11 +148,11 @@ def get_text_size_limit(model):
 
 def get_timeout_limit(model):
     if model == 'gpt-3.5-turbo-16k':
-        return 75
+        return 150
     elif model == 'gpt-4':
-        return 90
+        return 150
     elif model == 'gpt-4-32k':
-        return 120
+        return 180
     else:
         return 60
 
@@ -180,6 +198,8 @@ async def async_fetch_parse(text: str, model="gpt-3.5-turbo", skip_on_error=Fals
     end_time = time.time()
     time_spent = end_time - start_time
     log_msg(f'Parse results fetched in {time_spent:.2f} seconds.')
+
+    log_msg(f'Parse result length (in tokens): {get_token_length(parse_result, model=model)}')
 
     if return_source:
         return text, parse_result

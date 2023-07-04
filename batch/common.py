@@ -2,10 +2,11 @@ import asyncio
 import os
 import threading
 
-import batch_parse_job
-import batch_save_job
 import utils
 from utils import log_msg
+
+from . import parse
+from . import save
 
 
 STATUS_FILE = '/tmp/p2g/p2g_batch_job_status.txt'
@@ -95,7 +96,7 @@ def make_and_run_parse_job(job_args):
     gpt_model = utils.sanitize_gpt_model_choice(job_args.get('model', 'any'))
     dry_run = job_args.get('dry_run', False)
     prompt = job_args.get('prompt', None)
-    parse_job = batch_parse_job.BatchParseJob(
+    parse_job = parse.BatchParseJob(
         gpt_model=gpt_model,
         dry_run=dry_run,
         prompt_override=prompt,
@@ -123,7 +124,7 @@ def make_and_run_save_job(job_args, neo_config):
     if 'neo_password' in job_args:
         neo_config['password'] = job_args['neo_password']
 
-    def work_fn(): return batch_save_job.save_to_neo4j(data_source, neo_config)
+    def work_fn(): return save.save_to_neo4j(data_source, neo_config)
 
     utils.setup_logger(name=thread_name, log_file=LOG_FILE)
 

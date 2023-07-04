@@ -43,8 +43,7 @@ def main():
     # If the script defines a 'parse_args' function, parse the additional command line arguments using that and
     # pass the result to the script's 'main' function.
     if hasattr(script_module, 'parse_args') and callable(script_module.parse_args):
-        script_parser = script_module.parse_args()
-        script_args = script_parser.parse_args(args.script_args)
+        script_args = script_module.parse_args(args.script_args)
         def run_script(): return script_module.main(script_args)
     else:
         # If no parse_args function defined, call the script's 'main' function directly with no arguments

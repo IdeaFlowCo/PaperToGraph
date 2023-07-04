@@ -53,17 +53,17 @@ def clean_json(response):
             cleaned[key] = value
         cleaned = json.dumps(cleaned, indent=2)
         # log_msg(f'Cleaned up response JSON: \n{cleaned}')
-        return cleaned
+        return cleaned, True
     except json.decoder.JSONDecodeError:
         log_msg('Response not valid JSON!')
         if '{' in response:
             # Response isn't valid JSON but may be close enough that it can still be used, so we'll just return it as-is
-            return response
-        return None
+            return response, False
+        return None, False
     except Exception as err:
         log_msg(f'Error while attempting to clean response JSON: {err}')
         log_msg(f'Response was valid JSON, though, so returning it unchanged.')
-        return response
+        return response, True
 
 
 def get_context_window_size(model):
@@ -141,7 +141,7 @@ async def async_fetch_from_openai(
     skip_msg=None,
     max_tokens=1500,
     timeout=60,
-    retries_remaining=1,
+    retries_remaining=2,
     rate_limit_errors=0,
     skip_on_error=False,
     expect_json_result=False,
@@ -173,7 +173,7 @@ async def async_fetch_from_openai(
                 model=model,
                 messages=messages,
                 max_tokens=max_tokens,
-                temperature=0.5
+                temperature=0.4
             )
     except openai.error.RateLimitError as err:
         if 'exceeded your current quota' in err.__str__():
@@ -183,6 +183,8 @@ async def async_fetch_from_openai(
 
         log_msg('Rate limit error from OpenAI')
         if rate_limit_errors > 4:
+            # We've already retried this request 5 times, so we'll just give up.
+            # It's likely that there's some issue on OpenAI's end that will resolve itself soon.
             log_msg('Too many rate limit errors; abandoning this request and letting error bubble up.')
             raise err
 
@@ -191,6 +193,7 @@ async def async_fetch_from_openai(
         backoff_time = backoff_time * (2 ** rate_limit_errors)
         await asyncio.sleep(backoff_time)
 
+        # We track rate limit errors separately from other retries because they should always be fixable by waiting.
         params['rate_limit_errors'] = rate_limit_errors + 1
         return await async_fetch_from_openai(**params)
     except openai.error.InvalidRequestError as err:
@@ -200,15 +203,15 @@ async def async_fetch_from_openai(
         # In the future we'll let this bubble up so calling code can split the request into smaller chunks and try again.
         log_msg('Skipping this chunk.')
         return ''
-    except TimeoutError:
+    except TimeoutError as err:
         if retries_remaining > 0:
             log_msg(f'OpenAI request timeout. Trying again...')
             params['retries_remaining'] = retries_remaining - 1
             return await async_fetch_from_openai(**params)
-        log_msg(f'OpenAI request timed out multiple times.')
+        log_msg(f'OpenAI request timeout. Out of retries, abandoning request.')
         if skip_on_error:
             return ''
-        raise TimeoutError
+        raise err
     except BaseException as err:
         log_msg(f'Error encountered during OpenAI API call: {err}')
         if retries_remaining:
@@ -235,11 +238,11 @@ async def async_fetch_from_openai(
     if not expect_json_result:
         return result
 
-    result = clean_json(result)
+    result, is_valid = clean_json(result)
     log_debug(f'Cleaned response data: \n{result}')
-    if result is None:
+    if not is_valid:
         if retries_remaining > 0:
-            log_msg("Doesn't look like GPT gave us JSON. Trying again one more time...")
+            log_msg("Doesn't look like GPT gave us JSON. Trying again...")
             params['retries_remaining'] = retries_remaining - 1
             return await async_fetch_from_openai(**params)
         if skip_on_error:

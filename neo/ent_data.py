@@ -9,7 +9,7 @@ from .common import make_timestamp, normalize_entity_name, sanitize_relationship
 from .write import create_or_update_entity, create_or_update_entity_by_name, create_or_update_relationship
 
 
-class EntityData:
+class EntityRecord:
     def __init__(self, name, relationships=None, ent_type=None, timestamp=None, source=None):
         if not name:
             raise ValueError('Entity name must be supplied')
@@ -79,7 +79,11 @@ class EntityData:
         # All leftover data assumed to be relationships
         relationships = values_dict
 
-        return EntityData(name, relationships=relationships, ent_type=ent_type, source=source, timestamp=timestamp)
+        return EntityRecord(name, relationships=relationships, ent_type=ent_type, source=source, timestamp=timestamp)
+
+    def has_data_to_save(self):
+        # If there are no relationships, we shouldn't bother saving this stub of an entity.
+        return bool(self.relationships)
 
     def save_to_neo(self, neo_driver):
         log_msg(f'Saving entity "{self.name}"')

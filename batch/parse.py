@@ -1,4 +1,3 @@
-import argparse
 import asyncio
 import json
 
@@ -87,7 +86,7 @@ class BatchParseJob:
         aws.write_to_s3_file(copied_file_uri, input_data)
 
     async def __write_job_args_to_output_folder(self, data_source, output_uri_arg):
-        job_args_uri = f'{self.job_output_uri.rstrip("/")}/job_args.json'
+        job_args_uri = f'{self.job_output_uri}/job_args.json'
         if self.dry_run:
             log_msg(f'Would have written job args to {job_args_uri}')
             return
@@ -114,7 +113,7 @@ class BatchParseJob:
         await asyncio.gather(*self.output_tasks)
         log_msg('All output tasks complete.')
 
-        log_file_uri = f'{self.job_output_uri.rstrip("/")}/job_log.txt'
+        log_file_uri = f'{self.job_output_uri}/job_log.txt'
 
         if self.dry_run:
             log_msg(f'Would have uploaded job log file to {log_file_uri}')
@@ -132,7 +131,7 @@ class BatchParseJob:
         # Gather input files first so that we can fail fast if there are any issues doing so.
         input_files = await self.__find_input_files(data_source)
 
-        self.job_output_uri = aws.create_output_dir_for_job(data_source, output_uri, dry_run=self.dry_run)
+        self.job_output_uri = aws.create_output_dir_for_job(data_source, output_uri, dry_run=self.dry_run).rstrip("/")
 
         # Preserve this job's args in the output folder for any future investigations.
         await self.__write_job_args_to_output_folder(data_source, output_uri)
@@ -143,35 +142,3 @@ class BatchParseJob:
 
         log_msg(f'All parsing complete.')
         await self.__upload_log_file()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--data_source',
-        default='s3://paper2graph-parse-inputs',
-        help="The URI for the text to be parsed, like an S3 bucket location."
-    )
-    parser.add_argument(
-        '--output_uri',
-        default='s3://paper2graph-parse-results',
-        help="The URI where output is saved, like an S3 bucket location."
-    )
-    parser.add_argument(
-        '--gpt_model',
-        default='gpt-3.5-turbo',
-        help="The GPT model to use when parsing."
-    )
-    parser.add_argument(
-        '--dry_run',
-        action="store_true",
-        default=False,
-        help="The URI where output is saved, like an S3 bucket location."
-    )
-    args = parser.parse_args()
-
-    parse_job = BatchParseJob(gpt_model=args.gpt_model, dry_run=args.dry_run)
-
-    asyncio.run(
-        parse_job.run(args.data_source, args.output_uri)
-    )

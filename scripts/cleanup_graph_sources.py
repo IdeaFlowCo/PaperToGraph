@@ -82,9 +82,9 @@ def main(args):
         driver.close()
 
 
-def parse_args():
+def parse_args(args):
     parser = argparse.ArgumentParser(description='Correct source URIs in the graph')
 
     utils.add_neo_credential_override_args(parser)
 
-    return parser
+    return parser.parse_args(args)
