@@ -109,10 +109,6 @@ class BatchParseJob:
         if not self.log_file:
             return
 
-        # Ensure all output tasks are done before uploading log file
-        await asyncio.gather(*self.output_tasks)
-        log_msg('All output tasks complete.')
-
         log_file_uri = f'{self.job_output_uri}/job_log.txt'
 
         if self.dry_run:
@@ -136,9 +132,16 @@ class BatchParseJob:
         # Preserve this job's args in the output folder for any future investigations.
         await self.__write_job_args_to_output_folder(data_source, output_uri)
 
-        for i, input_file in enumerate(input_files):
-            log_msg(f'********* Processing file {input_file} ({i+1} out of {len(input_files)})')
-            await self.__process_file(input_file)
+        try:
+            for i, input_file in enumerate(input_files):
+                log_msg(f'********* Processing file {input_file} ({i+1} out of {len(input_files)})')
+                await self.__process_file(input_file)
 
-        log_msg(f'All parsing complete.')
-        await self.__upload_log_file()
+            # Wait for all output tasks to complete before exiting.
+            await asyncio.gather(*self.output_tasks)
+            log_msg('All output tasks complete.')
+
+            log_msg(f'All parsing complete.')
+        finally:
+            # Make sure we upload the log file even if there's an exception during processing.
+            await self.__upload_log_file()
