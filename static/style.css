@@ -465,6 +465,57 @@ textarea {
     border: 1px solid #999;
 }
 
-body div:last-child {
+body>div:last-child {
     margin-bottom: 3rem;
+}
+
+
+#search-controls {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    max-width: 60%;
+    margin: auto;
+}
+
+#answer-output,
+#notes-output,
+#sources-output {
+    display: block;
+    text-align: left;
+    margin-left: auto;
+    margin-right: auto;
+    font-size: medium;
+    overflow: auto;
+    max-height: 400px;
+}
+
+#answer-output,
+#notes-output {
+    border: 1px solid #999;
+    padding: 1rem;
+}
+
+#answer-output {
+    min-height: 8vh;
+}
+
+#sources-output {
+    font-size: 0.9em;
+    color: #999;
+    padding-bottom: 4em;
+}
+
+#sources-output a+a {
+    margin-left: 1ch;
+}
+
+#search-output-container {
+    box-sizing: border-box;
+    max-width: 60%;
+    margin: auto;
+}
+
+#search-output-container .label {
+    display: block;
 }

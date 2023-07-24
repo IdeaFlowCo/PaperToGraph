@@ -11,21 +11,22 @@ import batch
 import gpt
 import parse
 import save
+import simony
 import utils
 from utils import log_msg
 
 
-sentry_sdk.init(
-    dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
-    integrations=[
-        QuartIntegration(),
-    ],
+# sentry_sdk.init(
+#     dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
+#     integrations=[
+#         QuartIntegration(),
+#     ],
 
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for performance monitoring.
-    # Sentry recommends adjusting this value in production.
-    traces_sample_rate=1.0
-)
+#     # Set traces_sample_rate to 1.0 to capture 100%
+#     # of transactions for performance monitoring.
+#     # Sentry recommends adjusting this value in production.
+#     traces_sample_rate=1.0
+# )
 
 
 app = Quart(__name__)
@@ -64,22 +65,22 @@ async def raw_parse():
     __log_args(post)
 
     required_args = ['text']
-    if post is not None or not all(arg in post for arg in required_args):
-        text = post.get('text')
-        model = utils.sanitize_gpt_model_choice(post.get('model'))
-        prompt_override = post.get('prompt_override', None)
-        response = await make_response(
-            parse.async_parse_with_heartbeat(text, model=model, prompt_override=prompt_override),
-            {
-                'Content-Type': 'application/json',
-                'Cache-Control': 'no-cache',
-                'Transfer-Encoding': 'chunked',
-            },
-        )
-        response.timeout = None
-        return response
-    else:
+    if post is None or not all(arg in post for arg in required_args):
         return jsonify(__wrong_payload_response(), 400)
+
+    text = post.get('text')
+    model = utils.sanitize_gpt_model_choice(post.get('model'))
+    prompt_override = post.get('prompt_override', None)
+    response = await make_response(
+        parse.async_parse_with_heartbeat(text, model=model, prompt_override=prompt_override),
+        {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+            'Transfer-Encoding': 'chunked',
+        },
+    )
+    response.timeout = None
+    return response
 
 
 @app.route('/parse-prompt')
@@ -246,6 +247,25 @@ async def server_setup():
 async def batch_job_setup():
     batch.setup_status_file()
 
+
+@app.route('/query')
+async def query_page():
+    return await render_template("query.html")
+
+
+@app.route('/jack-search', methods=["POST"])
+async def jack_search():
+    post = await request.get_json()
+    log_msg('POST request to /jack-search endpoint')
+    __log_args(post)
+
+    required_args = ['query']
+    if post is None or not all(arg in post for arg in required_args):
+        return jsonify(__wrong_payload_response(), 400)
+
+    query = post.get('query')
+    result = await simony.query_simon(query)
+    return jsonify({'result': result})
 
 if __name__ == '__main__':
     print('Starting server...')
