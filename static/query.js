@@ -3,6 +3,7 @@
     const queryInput = document.querySelector("#query-input");
     const searchButton = document.querySelector("#btn-search");
     const searchSpinner = document.querySelector("#search-loading-spinner");
+    const genericErrorMsg = document.querySelector('#generic-error-msg');
     const answerOutput = document.querySelector("#answer-output");
     const notesOutput = document.querySelector("#notes-output");
     const sourcesOutput = document.querySelector("#sources-output");
@@ -18,10 +19,7 @@
 
     const handleSearchClick = async () => {
         // Hide any messages from previous attempts
-        // inputErrorMsg.classList.add('hidden');
-        // genericErrorMsg.classList.add('hidden');
-        // submitSuccessMsg.classList.add('hidden');
-        // jobCompleteMsg.classList.add('hidden');
+        genericErrorMsg.classList.add('hidden');
 
         // Disable submit button
         searchButton.disabled = true;
@@ -71,6 +69,7 @@
                 const sourceLinkEl = document.createElement('a');
                 sourceLinkEl.textContent = `[${citations}] ${title}`;
                 sourceLinkEl.href = sourceUrl;
+                sourceLinkEl.target = '_blank';
                 sourcesOutput.appendChild(sourceLinkEl);
             }
 
@@ -79,7 +78,7 @@
             searchSpinner.classList.add('hidden');
         } catch (e) {
             console.error(e);
-            // genericErrorMsg.classList.remove('hidden');
+            genericErrorMsg.classList.remove('hidden');
             // Re-enable search button so user can try again
             searchButton.disabled = false;
             searchSpinner.classList.add('hidden');
