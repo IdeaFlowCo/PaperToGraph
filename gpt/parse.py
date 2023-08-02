@@ -95,7 +95,7 @@ def get_output_reservation(model):
     # structural characters like {} and ""
     if model == 'gpt-4-32k':
         # Max context size: 32,000 tokens
-        return 8000
+        return 10000
     elif model == 'gpt-3.5-turbo-16k':
         # Max context size: 16,384 tokens
         return 6000
@@ -148,7 +148,7 @@ def get_text_size_limit(model):
 
 def get_timeout_limit(model):
     if model == 'gpt-3.5-turbo-16k':
-        return 150
+        return 240
     elif model == 'gpt-4':
         return 150
     elif model == 'gpt-4-32k':
