@@ -253,6 +253,14 @@ async def query_page():
     return await render_template("query.html")
 
 
+async def gen_simon_response(query):
+    yield ' '
+    # query_task = asyncio.create_task(simony.query_simon(query))
+    # time_task = asyncio.create_task(asyncio.sleep(10))
+    simon_response = await simony.query_simon(query)
+    yield json.dumps(simon_response)
+
+
 @app.route('/jack-search', methods=["POST"])
 async def jack_search():
     post = await request.get_json()
@@ -264,8 +272,16 @@ async def jack_search():
         return jsonify(__wrong_payload_response(), 400)
 
     query = post.get('query')
-    result = await simony.query_simon(query)
-    return jsonify({'result': result})
+    response = await make_response(
+        gen_simon_response(query),
+        {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+            'Transfer-Encoding': 'chunked',
+        },
+    )
+    response.timeout = None
+    return response
 
 if __name__ == '__main__':
     print('Starting server...')

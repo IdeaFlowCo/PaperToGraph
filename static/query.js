@@ -40,20 +40,20 @@
             const parsedResponse = await response.json();
             console.log('Received search response:', parsedResponse);
 
-            const answer = parsedResponse.result?.answer;
+            const answer = parsedResponse.answer;
             answerOutput.innerText = answer;
 
             let resourcesText = '';
-            for (const key in parsedResponse.result?.resources) {
-                resourcesText += key + ': ' + parsedResponse.result?.resources[key] + '\n';
+            for (const key in parsedResponse.resources) {
+                resourcesText += key + ': ' + parsedResponse.resources[key] + '\n';
             }
-            // const resources = parsedResponse.result?.resources;
+            // const resources = parsedResponse.resources;
             notesOutput.innerText = resourcesText;
 
             const citationsBySource = {};
             sourcesOutput.innerHTML = '';
-            for (const citationNumber in parsedResponse.result?.metadata) {
-                const metadata = parsedResponse.result?.metadata[citationNumber];
+            for (const citationNumber in parsedResponse.metadata) {
+                const metadata = parsedResponse.metadata[citationNumber];
                 if (!metadata || !metadata.source || !metadata.title) {
                     continue;
                 }

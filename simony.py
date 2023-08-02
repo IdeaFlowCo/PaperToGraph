@@ -29,7 +29,7 @@ async def query_simon(query):
     es = Elasticsearch(**ES_CONFIG)
     # UID = "test-uid"
     # UID = "test-uid-alt"
-    UID = 'ingest_files'
+    UID = 'paper2graph'
 
     # # serialize all of the above together
     context = AgentContext(llm, embedding, es, UID)
