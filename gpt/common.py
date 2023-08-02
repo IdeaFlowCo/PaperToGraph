@@ -9,9 +9,9 @@ import os
 import random
 
 import openai
-
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
+import tiktoken
 
 import utils
 from utils import log_msg, log_debug
@@ -64,6 +64,30 @@ def clean_json(response):
         log_msg(f'Error while attempting to clean response JSON: {err}')
         log_msg(f'Response was valid JSON, though, so returning it unchanged.')
         return response, True
+
+
+def get_token_length(text, model='gpt-3.5-turbo'):
+    encoding = tiktoken.encoding_for_model(model)
+    text_as_tokens = encoding.encode(text)
+    return len(text_as_tokens)
+
+
+def split_input_list_to_chunks(input_list, max_chunk_tokens, model='gpt-3.5-turbo'):
+    input_chunks = []
+    cur_chunk = []
+    cur_chunk_token_count = 0
+    for input in input_list:
+        # Add 1 to account for the newline that will be added between each input
+        input_token_count = get_token_length(input, model=model) + 1
+        if cur_chunk_token_count + input_token_count > max_chunk_tokens or len(cur_chunk) > 300:
+            input_chunks.append(cur_chunk)
+            cur_chunk = []
+            cur_chunk_token_count = 0
+        cur_chunk.append(input)
+        cur_chunk_token_count += input_token_count
+    if cur_chunk:
+        input_chunks.append(cur_chunk)
+    return input_chunks
 
 
 def get_context_window_size(model):
