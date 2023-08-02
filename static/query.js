@@ -27,7 +27,7 @@
         // Show spinner
         searchSpinner.classList.remove('hidden');
 
-        const response = await fetch('jack-search', {
+        const response = await fetch('query-simon', {
             method: 'POST',
             mode: 'cors',
             headers: {

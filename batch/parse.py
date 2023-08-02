@@ -10,7 +10,7 @@ from utils import log_msg
 
 class BatchParseJob:
     def __init__(self, gpt_model=None, dry_run=False, prompt_override=None, log_file=None):
-        self.gpt_model = utils.sanitize_gpt_model_choice(gpt_model)
+        self.gpt_model = gpt.sanitize_gpt_model_choice(gpt_model)
         self.dry_run = dry_run
         self.prompt_override = prompt_override
         self.log_file = log_file

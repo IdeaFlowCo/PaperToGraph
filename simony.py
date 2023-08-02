@@ -1,3 +1,4 @@
+import asyncio
 import json
 import sys
 import time
@@ -14,7 +15,7 @@ from utils import log_msg
 
 
 async def query_simon(query):
-    log_msg(f'Querying Simon with query: {query}')
+    log_msg(f'Querying Simon with query: "{query}"')
 
     log_msg(f'Initializing Simon...')
     env_vars = environment.get_env_vars()
@@ -34,9 +35,9 @@ async def query_simon(query):
     # # serialize all of the above together
     context = AgentContext(llm, embedding, es, UID)
 
-    # provision our data sources (knowledgebase is provided by default
-    # but initialized here for debug)
-    kb = KnowledgeBase(context)
+    # provision our data sources
+    # (knowledgebase is provided by default but initialized here for debug)
+    # kb = KnowledgeBase(context)
     providers = []
 
     # create assistant
@@ -45,7 +46,7 @@ async def query_simon(query):
     log_msg(f'Simon initialized. Querying Simon...')
 
     a = time.time()
-    assistant_result = assistant(query)
+    assistant_result = await asyncio.to_thread(lambda: assistant(query))
     b = time.time()
     res_for_logs = json.dumps(assistant_result, sort_keys=True, indent=2)
     log_msg(f'Simon query completed in {(a-b):.2f} seconds. Result:\n{res_for_logs}')

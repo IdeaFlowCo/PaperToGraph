@@ -2,6 +2,7 @@ import asyncio
 import os
 import threading
 
+import gpt
 import utils
 from utils import log_msg
 
@@ -93,7 +94,7 @@ def is_batch_job_running():
 def make_and_run_parse_job(job_args):
     thread_name = utils.BATCH_PARSE_THREAD_NAME
 
-    gpt_model = utils.sanitize_gpt_model_choice(job_args.get('model', 'any'))
+    gpt_model = gpt.sanitize_gpt_model_choice(job_args.get('model', 'any'))
     dry_run = job_args.get('dry_run', False)
     prompt = job_args.get('prompt', None)
     parse_job = parse.BatchParseJob(

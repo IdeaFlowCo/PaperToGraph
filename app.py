@@ -16,17 +16,17 @@ import utils
 from utils import log_msg
 
 
-# sentry_sdk.init(
-#     dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
-#     integrations=[
-#         QuartIntegration(),
-#     ],
+sentry_sdk.init(
+    dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
+    integrations=[
+        QuartIntegration(),
+    ],
 
-#     # Set traces_sample_rate to 1.0 to capture 100%
-#     # of transactions for performance monitoring.
-#     # Sentry recommends adjusting this value in production.
-#     traces_sample_rate=1.0
-# )
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # Sentry recommends adjusting this value in production.
+    traces_sample_rate=1.0
+)
 
 
 app = Quart(__name__)
@@ -35,7 +35,7 @@ app.config.update(ENV='development')
 app.config.update(SECRET_KEY='878as7d8f7997dfaewrwv8asdf8)(dS&A&*d78(*&ASD08A')
 
 
-def __log_args(args):
+def _log_args(args):
     to_log = args.copy()
     if 'text' in to_log:
         if len(to_log['text']) > 150:
@@ -44,7 +44,7 @@ def __log_args(args):
     log_msg(f'Request arguments: \n{to_log}')
 
 
-def __wrong_payload_response(message="wrong payload"):
+def _wrong_payload_response(message="wrong payload"):
     return {"translation": message}
 
 
@@ -62,14 +62,14 @@ async def extractor():
 async def raw_parse():
     post = await request.get_json()
     log_msg('POST request to /raw-parse endpoint')
-    __log_args(post)
+    _log_args(post)
 
     required_args = ['text']
     if post is None or not all(arg in post for arg in required_args):
-        return jsonify(__wrong_payload_response(), 400)
+        return jsonify(_wrong_payload_response(), 400)
 
     text = post.get('text')
-    model = utils.sanitize_gpt_model_choice(post.get('model'))
+    model = gpt.sanitize_gpt_model_choice(post.get('model'))
     prompt_override = post.get('prompt_override', None)
     response = await make_response(
         parse.async_parse_with_heartbeat(text, model=model, prompt_override=prompt_override),
@@ -94,11 +94,11 @@ async def get_parse_prompt():
 async def save_to_neo():
     post = await request.get_json()
     log_msg('POST request to /save-to-neo endpoint')
-    __log_args(post)
+    _log_args(post)
 
     required_args = ['data', 'input_text']
     if post is None or not all(arg in post for arg in required_args):
-        return jsonify(__wrong_payload_response(), 400)
+        return jsonify(_wrong_payload_response(), 400)
 
     try:
         # Make sure data is valid JSON
@@ -129,14 +129,14 @@ async def batch_status():
 async def new_batch_job():
     post = await request.get_json()
     log_msg('POST request to /new-batch-job endpoint')
-    __log_args(post)
+    _log_args(post)
 
     if batch.is_batch_job_running():
         return jsonify({'status': 'error', 'message': 'batch job already running'}), 400
 
     required_args = ['job_type', 'data_source']
     if post is None or not all(arg in post for arg in required_args):
-        return jsonify(__wrong_payload_response(), 400)
+        return jsonify(_wrong_payload_response(), 400)
 
     if post['job_type'] == 'parse':
         batch.make_and_run_parse_job(post)
@@ -216,7 +216,36 @@ async def batch_log():
     return response
 
 
-def __handle_neo_credential_overrides():
+@app.route('/query')
+async def query_page():
+    return await render_template("query.html")
+
+
+@app.route('/query-simon', methods=["POST"])
+async def query_simon():
+    post = await request.get_json()
+    log_msg('POST request to /query-simon endpoint')
+    _log_args(post)
+
+    required_args = ['query']
+    if post is None or not all(arg in post for arg in required_args):
+        return jsonify(_wrong_payload_response(), 400)
+
+    query = post.get('query')
+    return await utils.make_response_with_heartbeat(
+        simony.query_simon(query),
+        log_label='simon query'
+    )
+
+if __name__ == '__main__':
+    print('Starting server...')
+    if app.config.get('DEV_SERVER'):
+        app.run(host="127.0.0.1", port=5001, debug=True)
+    else:
+        app.run_server(use_reloader=False)
+
+
+def _handle_neo_credential_overrides():
     neo_credentials = app.config.get('NEO4J_CREDENTIALS', {})
     neo_cred_overrides = utils.get_neo_config_from_env()
     # Ignore any override values that are None or empty strings
@@ -239,53 +268,10 @@ async def server_setup():
         utils.setup_logger()
     log_msg('Logger initialized')
 
-    __handle_neo_credential_overrides()
+    _handle_neo_credential_overrides()
     aws.check_for_env_vars(throw_if_missing=False)
 
 
 @app.before_serving
 async def batch_job_setup():
     batch.setup_status_file()
-
-
-@app.route('/query')
-async def query_page():
-    return await render_template("query.html")
-
-
-async def gen_simon_response(query):
-    yield ' '
-    # query_task = asyncio.create_task(simony.query_simon(query))
-    # time_task = asyncio.create_task(asyncio.sleep(10))
-    simon_response = await simony.query_simon(query)
-    yield json.dumps(simon_response)
-
-
-@app.route('/jack-search', methods=["POST"])
-async def jack_search():
-    post = await request.get_json()
-    log_msg('POST request to /jack-search endpoint')
-    __log_args(post)
-
-    required_args = ['query']
-    if post is None or not all(arg in post for arg in required_args):
-        return jsonify(__wrong_payload_response(), 400)
-
-    query = post.get('query')
-    response = await make_response(
-        gen_simon_response(query),
-        {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'no-cache',
-            'Transfer-Encoding': 'chunked',
-        },
-    )
-    response.timeout = None
-    return response
-
-if __name__ == '__main__':
-    print('Starting server...')
-    if app.config.get('DEV_SERVER'):
-        app.run(host="127.0.0.1", port=5001, debug=True)
-    else:
-        app.run_server(use_reloader=False)

@@ -17,6 +17,16 @@ import utils
 from utils import log_msg, log_debug
 
 
+VALID_GPT_MODELS = ['gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-32k']
+DEFAULT_GPT_MODEL = 'gpt-3.5-turbo'
+
+
+def sanitize_gpt_model_choice(model):
+    if model not in VALID_GPT_MODELS:
+        model = 'gpt-3.5-turbo'
+    return model
+
+
 def clean_json(response):
     cleaned = {}
     try:
