@@ -88,3 +88,25 @@ def upload_to_s3(output_uri, file_path):
     bucket, key = parse_s3_uri(output_uri)
     s3_client = boto3.client('s3')
     s3_client.upload_file(file_path, bucket, key)
+
+
+def create_new_batch_set_dir(base_dir_uri):
+    bucket, base_dir_path = parse_s3_uri(base_dir_uri)
+
+    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+
+    # Assemble the full path for the output directory we're creating
+    output_path = f'{base_dir_path}/{timestamp}-web-search-upload/'
+    # If base_dir_path is empty (making new dir at bucket base), we'll have a leading slash we need to trim
+    output_path = output_path.lstrip('/')
+
+    log_msg(
+        f'Creating a subdirectory for job output at s3://{bucket}/{output_path}')
+    s3_client = boto3.client('s3')
+    response = s3_client.put_object(Bucket=bucket, Key=output_path)
+
+    if response['ResponseMetadata']['HTTPStatusCode'] == 200:
+        return f's3://{bucket}/{output_path}'
+    else:
+        raise Exception(
+            f'Error creating output subdirectory at {output_path}', response)

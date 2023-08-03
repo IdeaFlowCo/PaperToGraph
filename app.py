@@ -11,6 +11,7 @@ import batch
 import gpt
 import parse
 import save
+import search
 import simony
 import utils
 from utils import log_msg
@@ -237,12 +238,45 @@ async def query_simon():
         log_label='simon query'
     )
 
-if __name__ == '__main__':
-    print('Starting server...')
-    if app.config.get('DEV_SERVER'):
-        app.run(host="127.0.0.1", port=5001, debug=True)
-    else:
-        app.run_server(use_reloader=False)
+
+@app.route('/search')
+async def search_page():
+    return await render_template("search.html")
+
+
+@app.route('/doc-search', methods=["POST"])
+async def doc_search():
+    post = await request.get_json()
+    log_msg('POST request to /doc-search endpoint')
+    _log_args(post)
+
+    required_args = ['query']
+    if post is None or not all(arg in post for arg in required_args):
+        return jsonify(_wrong_payload_response(), 400)
+
+    query = post.get('query')
+    papers_dir = utils.get_app_config().get('PAPERS_DIR')
+    return await utils.make_response_with_heartbeat(
+        search.asearch_docs(query, papers_dir=papers_dir),
+        log_label='Doc search'
+    )
+
+
+@app.route('/new-doc-set', methods=["POST"])
+async def make_new_doc_set():
+    post = await request.get_json()
+    log_msg('POST request to /doc-search endpoint')
+    _log_args(post)
+
+    required_args = ['files']
+    if post is None or not all(arg in post for arg in required_args):
+        return jsonify(_wrong_payload_response(), 400)
+
+    files = post.get('files')
+    return await utils.make_response_with_heartbeat(
+        search.aupload_batch_set(files),
+        log_label='Upload new batch set'
+    )
 
 
 def _handle_neo_credential_overrides():
@@ -275,3 +309,11 @@ async def server_setup():
 @app.before_serving
 async def batch_job_setup():
     batch.setup_status_file()
+
+
+if __name__ == '__main__':
+    print('Starting server...')
+    if app.config.get('DEV_SERVER'):
+        app.run(host="127.0.0.1", port=5001, debug=True)
+    else:
+        app.run_server(use_reloader=False)

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MD6L3WYG0S"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', 'G-MD6L3WYG0S');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper2Graph batch processing</title>
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css" />
+    <script src="https://kit.fontawesome.com/1a48924413.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+    <!-- nav -->
+
+    <nav class="navigation container">
+        <div class="nav-brand">
+            Paper2Graph
+        </div>
+        <div class="spacer"></div>
+        <a class="link" href="/">Translator</a>
+        <a class="link" href="/batch">Batch Processing</a>
+        <a class="link" href="/query">Query</a>
+        <span class="link link-active">Search</span>
+    </nav>
+
+    <!-- content -->
+
+    <div id="search-controls" class="utils-container">
+        <h2 class="title">Search</h2>
+
+        <div class="row-container">
+            <input id="search-input" class="text-input" />
+            <button class="link link-primary" id="btn-search">Search</button>
+        </div>
+    </div>
+
+    <div id="search-loading-spinner" class="container container-center hidden">
+        <div class="spinner-container">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <div id="search-error-msg" class="error-msg hidden">
+        Error encountered during search. Please try again.
+    </div>
+
+    <div id="search-results-container" class="utils-container">
+        <span class="label">Matching papers</span>
+        <div id="search-results-placeholder" class="results-list-placeholder">
+            Search results will appear here.
+        </div>
+        <div id="search-results-empty" class="hidden">
+            No results found.
+        </div>
+        <ul id="search-results-list" class="results-list hidden">
+        </ul>
+        <button class="link link-primary" id="btn-add-to-list" disabled>Append all to "new batch set" list</button>
+    </div>
+
+    <div id="new-batch-container" class="utils-container">
+        <span class="label">New batch set</span>
+        <textarea id="new-batch-list"></textarea>
+
+        <div class="row-container">
+            <button class="link link-primary" id="btn-new-batch-set" disabled>Create new batch input set</button>
+            <button class="link link-primary" id="btn-new-batch-dedupe" disabled>Dedupe list</button>
+        </div>
+    </div>
+
+    <div id="new-batch-loading-spinner" class="container container-center hidden">
+        <div class="spinner-container">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <div class="utils-container">
+        <div id="new-batch-error-msg" class="error-msg hidden">
+            Error encountered creating new batch set. Please try again.
+        </div>
+        <div id="new-batch-bad-files-msg" class="error-msg hidden">
+            <p>The server did not recognize the following files. (Did bad text get into the input?) Please remove them
+                and try again.</p>
+            <p>Unknown files:</p>
+            <pre id="new-batch-bad-files-list">http://localhost:5001/search</pre>
+        </div>
+        <div id="new-batch-success-msg" class="success-msg hidden">
+            Successfully created new batch set. Selected papers available at:
+            <pre id="new-batch-uri">http://localhost:5001/search</pre>
+        </div>
+    </div>
+
+    <script src="https://js.sentry-cdn.com/4226949e3a1d4812b5c26d55888d470d.min.js" crossorigin="anonymous"></script>
+    <script src="{{ url_for('static', filename='search.js') }}"></script>
+</body>
+
+</html>

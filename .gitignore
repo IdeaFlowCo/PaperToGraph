@@ -1,7 +1,21 @@
-#.gitignore
-venv
-__pycache__
-lib
-**/.DS_Store
-logs
-.vscode
+# Env variables file for local running
+/.env
+
+# Virtual environments
+/venv/
+
+# Generated Python cache files
+__pycache__/
+*.pyc
+*.py#
+
+# Generated system files (from archives, etc)
+.DS_Store
+opt/
+media
+
+# Editor configs
+/.vscode
+
+# Log files from running batch jobs locally
+/logs/

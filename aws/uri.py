@@ -6,7 +6,7 @@ from urllib.parse import urlparse, parse_qs
 S3_CONSOLE_NETLOC = 's3.console.aws.amazon.com'
 
 
-def __parse_s3_console_url(url):
+def _parse_s3_console_url(url):
     # URLs will either be in the form
     # https://s3.console.aws.amazon.com/s3/buckets/{bucket}?prefix={prefix}
     # or
@@ -40,7 +40,7 @@ def parse_s3_uri(uri):
     elif parsed.scheme == 'https':
         # Check if this is a console URL and handle it accordingly
         if parsed.netloc == S3_CONSOLE_NETLOC:
-            return __parse_s3_console_url(uri)
+            return _parse_s3_console_url(uri)
 
         if not parsed.netloc.endswith('s3.amazonaws.com'):
             # Doesn't look like an S3 URL
