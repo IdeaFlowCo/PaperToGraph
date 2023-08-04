@@ -12,7 +12,7 @@ import gpt
 import parse
 import save
 import search
-import simony
+import simon_client
 import utils
 from utils import log_msg
 
@@ -222,7 +222,7 @@ async def query_simon():
 
     query = post.get('query')
     return await utils.make_response_with_heartbeat(
-        simony.query_simon(app.simon_client, query),
+        app.simon_client.query_simon(query),
         log_label='simon query'
     )
 
@@ -285,7 +285,7 @@ async def batch_job_setup():
 
 @app.before_serving
 async def simon_setup():
-    app.simon_client = simony.make_simon_client(app.config)
+    app.simon_client = simon_client.SimonClient(app.config)
 
 
 if __name__ == '__main__':
