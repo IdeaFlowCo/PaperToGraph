@@ -2,9 +2,15 @@ import argparse
 import asyncio
 
 from batch import BatchParseJob
+import utils
+from utils import log_msg
 
 
 def main(args):
+    config = utils.environment.load_config(cl_args=args)
+    utils.setup_logger(**config['logger'])
+    log_msg('Logger initialized')
+
     parse_job = BatchParseJob(gpt_model=args.gpt_model, dry_run=args.dry_run)
 
     asyncio.run(

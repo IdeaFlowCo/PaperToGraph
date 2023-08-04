@@ -38,9 +38,10 @@
         <h2 class="title">Query</h2>
 
         <span class="label">Query</span>
-        <input id="query-input" class="text-input" />
-
-        <button class="link link-primary" id="btn-search">Search</button>
+        <div class="row-container">
+            <input id="query-input" class="text-input" />
+            <button class="link link-primary" id="btn-search">Search</button>
+        </div>
     </div>
 
     <div id="search-loading-spinner" class="container container-center hidden">
@@ -53,12 +54,12 @@
         Error encountered during query. Please try again.
     </div>
 
-    <div id="search-output-container">
+    <div id="search-output-container" class="utils-container">
         <span class="label">Textual answer to the question</span>
         <div id="answer-output">
         </div>
-        <span class="label">Quotes from sources</span>
-        <div id="notes-output">
+        <span class="label">References</span>
+        <div id="references-output">
         </div>
         <span class="label">Sources</span>
         <div id="sources-output">

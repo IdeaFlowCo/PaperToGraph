@@ -5,7 +5,7 @@
     const searchSpinner = document.querySelector("#search-loading-spinner");
     const genericErrorMsg = document.querySelector('#generic-error-msg');
     const answerOutput = document.querySelector("#answer-output");
-    const notesOutput = document.querySelector("#notes-output");
+    const referencesOutput = document.querySelector("#references-output");
     const sourcesOutput = document.querySelector("#sources-output");
 
     const buildSearchBody = () => {
@@ -37,42 +37,38 @@
         });
 
         try {
-            const parsedResponse = await response.json();
-            console.log('Received search response:', parsedResponse);
+            const parsed = await response.json();
+            console.log('Received search response:', parsed);
 
-            const answer = parsedResponse.answer;
+            const answer = parsed.answer;
             answerOutput.innerText = answer;
 
             let resourcesText = '';
-            for (const key in parsedResponse.resources) {
-                resourcesText += key + ': ' + parsedResponse.resources[key] + '\n';
-            }
-            // const resources = parsedResponse.resources;
-            notesOutput.innerText = resourcesText;
-
             const citationsBySource = {};
-            sourcesOutput.innerHTML = '';
-            for (const citationNumber in parsedResponse.metadata) {
-                const metadata = parsedResponse.metadata[citationNumber];
-                if (!metadata || !metadata.source || !metadata.title) {
-                    continue;
+            for (const [source, references] of Object.entries(parsed.resource_references)) {
+                citationsBySource[source] = { 'title': '', 'citations': [] };
+                for (const [refNum, reference] of Object.entries(references)) {
+                    if (refNum === '_hash') continue;
+
+                    resourcesText += `[${refNum}]: ${reference.text}\n`;
+
+                    let title = reference.metadata.title
+                    title = title.endsWith('.txt') ? title.slice(0, -4) : title;
+                    citationsBySource[source]['title'] = title;
+                    citationsBySource[source]['citations'].push(refNum);
                 }
-                if (!citationsBySource[metadata.source]) {
-                    citationsBySource[metadata.source] = { '_citations': [], '_title': metadata.title };
-                }
-                citationsBySource[metadata.source]['_citations'].push(citationNumber);
             }
+            referencesOutput.innerText = resourcesText;
+
+            sourcesOutput.innerHTML = '';
             for (const sourceUrl in citationsBySource) {
                 const source = citationsBySource[sourceUrl];
-                const title = source._title.endsWith('.txt') ? source._title.slice(0, -4) : source._title;
-                const citations = source._citations.join(', ');
                 const sourceLinkEl = document.createElement('a');
-                sourceLinkEl.textContent = `[${citations}] ${title}`;
+                sourceLinkEl.textContent = `[${source.citations.join(', ')}] ${source.title}`;
                 sourceLinkEl.href = sourceUrl;
                 sourceLinkEl.target = '_blank';
                 sourcesOutput.appendChild(sourceLinkEl);
             }
-
 
             searchButton.disabled = false;
             searchSpinner.classList.add('hidden');

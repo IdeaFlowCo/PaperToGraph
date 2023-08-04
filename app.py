@@ -31,7 +31,8 @@ sentry_sdk.init(
 
 
 app = Quart(__name__)
-app.config.from_prefixed_env('P2G')
+config = utils.load_config()
+app.config.update(config)
 app.config.update(ENV='development')
 app.config.update(SECRET_KEY='878as7d8f7997dfaewrwv8asdf8)(dS&A&*d78(*&ASD08A')
 
@@ -67,7 +68,7 @@ async def raw_parse():
 
     required_args = ['text']
     if post is None or not all(arg in post for arg in required_args):
-        return jsonify(_wrong_payload_response(), 400)
+        return jsonify(_wrong_payload_response()), 400
 
     text = post.get('text')
     model = gpt.sanitize_gpt_model_choice(post.get('model'))
@@ -99,18 +100,25 @@ async def save_to_neo():
 
     required_args = ['data', 'input_text']
     if post is None or not all(arg in post for arg in required_args):
-        return jsonify(_wrong_payload_response(), 400)
+        return jsonify(_wrong_payload_response()), 400
 
     try:
         # Make sure data is valid JSON
-        json.loads(post['data'])
-        log_msg('About to save input text')
-        saved_input_uri = save.save_input_text(post['input_text'])
-        log_msg('Saved input text')
-        save.save_json_data(post['data'], source_uri=saved_input_uri, neo_config=app.config.get('NEO4J_CREDENTIALS'))
-        return jsonify({'status': 'success'}, 200)
+        data = json.loads(post['data'])
     except json.JSONDecodeError:
-        return jsonify({'status': 'error', 'message': 'data provided not valid JSON'}, 400)
+        return jsonify({'status': 'error', 'message': 'data provided not valid JSON'}), 400
+
+    log_msg('Saving input text to S3...')
+    saved_input_uri = save.save_input_text_to_s3(post['input_text'])
+
+    log_msg('Saving data to Neo4j...')
+    save.save_data_to_neo4j(
+        data,
+        source_uri=saved_input_uri,
+        neo_config=app.config.get('neo4j_config')
+    )
+
+    return jsonify({'status': 'success'})
 
 
 @app.route('/batch')
@@ -137,13 +145,13 @@ async def new_batch_job():
 
     required_args = ['job_type', 'data_source']
     if post is None or not all(arg in post for arg in required_args):
-        return jsonify(_wrong_payload_response(), 400)
+        return jsonify(_wrong_payload_response()), 400
 
     if post['job_type'] == 'parse':
         batch.make_and_run_parse_job(post)
         return jsonify({'status': 'success', 'message': 'New job started'}), 200
     elif post['job_type'] == 'save':
-        neo_config = app.config.get('NEO4J_CREDENTIALS')
+        neo_config = app.config.get('neo4j')
         batch.make_and_run_save_job(post, neo_config)
         return jsonify({'status': 'success', 'message': 'New job started'}), 200
     else:
@@ -155,26 +163,6 @@ async def cancel_batch_job():
     log_msg('POST request to /cancel-batch-job endpoint')
     batch.cancel_batch_job()
     return jsonify({'status': 'success', 'message': 'Batch job cancel requested'}), 200
-
-
-async def batch_log_response_generator(file_path):
-    with open(file_path, 'r') as file:
-        lines = file.readlines()
-        # Yield last 20 lines as context
-        for line in lines[-20:]:
-            yield f'data:{line}\n\n'
-        # Watch for new lines and yield them as they are added
-        while batch.is_batch_job_running():
-            current_position = file.tell()
-            line = file.readline().rstrip()
-            if line:
-                yield f'data:{line}\n\n'
-                continue
-            else:
-                yield f'data:nodata\n\n'
-                file.seek(current_position)
-                await asyncio.sleep(0.5)
-        yield f'data:done\n\n'
 
 
 @app.route('/batch-log', methods=["GET"])
@@ -230,11 +218,11 @@ async def query_simon():
 
     required_args = ['query']
     if post is None or not all(arg in post for arg in required_args):
-        return jsonify(_wrong_payload_response(), 400)
+        return jsonify(_wrong_payload_response()), 400
 
     query = post.get('query')
     return await utils.make_response_with_heartbeat(
-        simony.query_simon(query),
+        simony.query_simon(app.simon_client, query),
         log_label='simon query'
     )
 
@@ -250,12 +238,15 @@ async def doc_search():
     log_msg('POST request to /doc-search endpoint')
     _log_args(post)
 
+    papers_dir = app.config.get('PAPERS_DIR')
+    if not papers_dir:
+        return jsonify({'status': 'error', 'message': 'PAPERS_DIR not configured'}), 500
+
     required_args = ['query']
     if post is None or not all(arg in post for arg in required_args):
-        return jsonify(_wrong_payload_response(), 400)
+        return jsonify(_wrong_payload_response()), 400
 
     query = post.get('query')
-    papers_dir = utils.get_app_config().get('PAPERS_DIR')
     return await utils.make_response_with_heartbeat(
         search.asearch_docs(query, papers_dir=papers_dir),
         log_label='Doc search'
@@ -270,7 +261,7 @@ async def make_new_doc_set():
 
     required_args = ['files']
     if post is None or not all(arg in post for arg in required_args):
-        return jsonify(_wrong_payload_response(), 400)
+        return jsonify(_wrong_payload_response()), 400
 
     files = post.get('files')
     return await utils.make_response_with_heartbeat(
@@ -279,36 +270,22 @@ async def make_new_doc_set():
     )
 
 
-def _handle_neo_credential_overrides():
-    neo_credentials = app.config.get('NEO4J_CREDENTIALS', {})
-    neo_cred_overrides = utils.get_neo_config_from_env()
-    # Ignore any override values that are None or empty strings
-    neo_cred_overrides = {k: v for k, v in neo_cred_overrides.items() if v}
-
-    if not neo_cred_overrides:
-        log_msg('No Neo4j credential overrides from environment variables')
-        return
-
-    log_msg(f'Neo4j credential overrides from environment variables: {neo_cred_overrides}')
-    neo_credentials.update(neo_cred_overrides)
-    app.config.update(NEO4J_CREDENTIALS=neo_credentials)
-
-
 @app.before_serving
 async def server_setup():
-    if app.config.get('LOG_LEVEL'):
-        utils.setup_logger(level=app.config.get('LOG_LEVEL'))
-    else:
-        utils.setup_logger()
+    utils.setup_logger(**app.config['logger'])
     log_msg('Logger initialized')
 
-    _handle_neo_credential_overrides()
     aws.check_for_env_vars(throw_if_missing=False)
 
 
 @app.before_serving
 async def batch_job_setup():
     batch.setup_status_file()
+
+
+@app.before_serving
+async def simon_setup():
+    app.simon_client = simony.make_simon_client(app.config)
 
 
 if __name__ == '__main__':

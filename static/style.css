@@ -411,19 +411,17 @@ body>div:last-child {
 }
 
 #answer-output,
-#notes-output,
+#references-output,
 #sources-output {
     display: block;
     text-align: left;
-    margin-left: auto;
-    margin-right: auto;
     font-size: medium;
     overflow: auto;
     max-height: 400px;
 }
 
 #answer-output,
-#notes-output {
+#references-output {
     border: 1px solid #999;
     padding: 1rem;
 }
@@ -442,11 +440,11 @@ body>div:last-child {
     margin-left: 1ch;
 }
 
-#search-output-container {
+/* #search-output-container {
     box-sizing: border-box;
     max-width: 60%;
     margin: auto;
-}
+} */
 
 #search-output-container .label {
     display: block;

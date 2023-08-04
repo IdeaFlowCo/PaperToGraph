@@ -210,14 +210,13 @@ async def main(args):
     thread_name = utils.ENT_TYPES_THREAD_NAME
     threading.current_thread().setName(thread_name)
 
-    log_level = 'DEBUG' if args.debug else 'INFO'
-    utils.setup_logger(name=thread_name, level=log_level, log_file=args.log_file)
+    config = utils.environment.load_config(cl_args=args)
+    utils.setup_logger(name=thread_name, **config['logger'])
     log_msg('Logger initialized')
 
     source_dates = load_source_dates(args.dates_file)
 
-    neo_config = utils.neo_config_from_args_or_env(args)
-    driver = neo.get_neo4j_driver(neo_config)
+    driver = neo.get_neo4j_driver(config['neo4j'])
 
     try:
         update_node_source_dates(driver, source_dates)

@@ -1,0 +1,3 @@
+[submodule "simon"]
+	path = simon
+	url = https://github.com/Shabang-Systems/simon

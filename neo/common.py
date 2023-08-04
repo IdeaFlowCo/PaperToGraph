@@ -33,20 +33,14 @@ def make_timestamp():
 
 
 def get_neo4j_driver(neo_config):
-    if not neo_config:
-        neo_config = {}
-
-    # Ignore any config values that are None or empty strings
-    neo_config = {k: v for k, v in neo_config.items() if v}
-
-    uri = neo_config.get('uri', 'neo4j+s://20d077bf.databases.neo4j.io')
-    user = neo_config.get('user', 'neo4j')
-    password = neo_config.get('password', 'VNfVHsSRzfTZlRRDTDluxFvi6PfLtwkO_5JTxJCV3Mc')
+    uri = neo_config['uri']
+    user = neo_config['user']
+    password = neo_config['password']
 
     params_for_log = {
         'uri': uri,
         'user': user,
-        'password': 'DEFAULT' if 'password' not in neo_config else password[:3] + '...' + password[-3:]
+        'password': password[:3] + '...' + password[-3:]
     }
     log_msg(f'Connecting to Neo4j database with the following parameters:\n{json.dumps(params_for_log, indent=2)}')
 

@@ -7,11 +7,12 @@ import utils
 
 
 def main(args):
-    neo_config = utils.neo_config_from_args_or_env(args)
-    aws.check_for_env_vars()
+    config = utils.environment.load_config(cl_args=args)
+    utils.setup_logger(**config['logger'])
+    utils.log_msg('Logger initialized')
 
     asyncio.run(
-        batch.save_to_neo4j(args.data_source, neo_config)
+        batch.save_to_neo4j(args.data_source, config['neo4j'])
     )
 
 

@@ -10,7 +10,7 @@ import neo
 from utils import log_msg, log_warn, log_error
 
 
-def save_dict_of_entities(neo_driver, data, source=None, timestamp=None):
+def _save_dict_of_entities(neo_driver, data, source=None, timestamp=None):
     if not timestamp:
         timestamp = neo.make_timestamp()
 
@@ -34,7 +34,7 @@ def save_dict_of_entities(neo_driver, data, source=None, timestamp=None):
             ent.save_relationships_to_neo(neo_driver)
 
 
-def save_json_data(json_str, source_uri=None, neo_config=None):
+def save_data_to_neo4j(data, source_uri=None, neo_config=None):
     if not source_uri:
         raise ValueError('Must provide a source URI for the input data.')
     # Ensure save input URI is an HTTP URL for easy access from Neo4j
@@ -47,25 +47,20 @@ def save_json_data(json_str, source_uri=None, neo_config=None):
     timestamp = neo.make_timestamp()
 
     try:
-        parsed = json.loads(json_str)
-        if isinstance(parsed, dict):
-            save_dict_of_entities(
-                driver, parsed, source=source_uri, timestamp=timestamp)
-        elif isinstance(parsed, list):
-            for obj in parsed:
-                save_dict_of_entities(
+        if isinstance(data, dict):
+            _save_dict_of_entities(
+                driver, data, source=source_uri, timestamp=timestamp)
+        elif isinstance(data, list):
+            for obj in data:
+                _save_dict_of_entities(
                     driver, obj, source=source_uri, timestamp=timestamp)
         else:
             log_error(
-                f'Unexpected input type. Expected JSON-encoded object or array, got: {type(parsed)}')
-            log_error(f'Exact string received: "{json_str}"')
-            log_error(f'Parsed as: {parsed}')
+                f'Unexpected input type. Expected dict or list, got: {type(data)}')
+            log_error(f'Exact string received: "{data}"')
+            log_error(f'Parsed as: {data}')
             raise Exception(
-                f'Unexpected input: "{json_str}"', f'Parsed as: {parsed}')
-    except json.JSONDecodeError as err:
-        log_error('Provided input is not valid JSON.')
-        log_error(f'Exact string received: "{json_str}"')
-        raise err
+                f'Unexpected input: {data}')
     finally:
         driver.close()
 
@@ -74,7 +69,7 @@ WEB_SUBMISSIONS_URI = 's3://paper2graph-parse-inputs/web-submissions/'
 HASH_SLUG_LENGTH = 12
 
 
-def save_input_text(text):
+def save_input_text_to_s3(text):
     hash_slug = hashlib.sha256(text.encode('utf-8')).hexdigest()
     hash_slug = hash_slug[:HASH_SLUG_LENGTH]
     output_uri = f'{WEB_SUBMISSIONS_URI.rstrip("/")}/{hash_slug}.txt'

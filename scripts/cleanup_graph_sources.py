@@ -70,11 +70,13 @@ def update_sources(neo4j_driver=None):
 def main(args):
     thread_name = utils.GRAPH_SOURCES_THREAD_NAME
     threading.current_thread().setName(thread_name)
-    utils.setup_logger(name=thread_name)
+
+    config = utils.environment.load_config(cl_args=args)
+
+    utils.setup_logger(name=thread_name, **config['logger'])
     log_msg('Logger initialized')
 
-    neo_config = utils.neo_config_from_args_or_env(args)
-    driver = neo.get_neo4j_driver(neo_config)
+    driver = neo.get_neo4j_driver(config['neo4j'])
 
     try:
         update_sources(driver)

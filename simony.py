@@ -8,83 +8,49 @@ from langchain.embeddings import OpenAIEmbeddings
 
 from elasticsearch import Elasticsearch
 
-from simon import AgentContext, Assistant, KnowledgeBase
-from simon import environment
+# Add submodule dir to path to allow imports
+sys.path.append('./simon')
+from simon import AgentContext, Assistant
 
+import utils
 from utils import log_msg
 
 
-async def query_simon(query):
-    log_msg(f'Querying Simon with query: "{query}"')
-
+def make_simon_client(config):
     log_msg(f'Initializing Simon...')
-    env_vars = environment.get_env_vars()
-    KEY = env_vars.get("OPENAI_KEY")
-    ES_CONFIG = env_vars.get('ES_CONFIG')
+    openai_api_key = config['OPENAI_API_KEY']
 
-    llm = ChatOpenAI(openai_api_key=KEY, model_name="gpt-4", temperature=0)
-    # llm = OpenAI(openai_api_key=KEY, model_name="gpt-4")
-    embedding = OpenAIEmbeddings(openai_api_key=KEY, model="text-embedding-ada-002")
-
-    # db
-    es = Elasticsearch(**ES_CONFIG)
-    # UID = "test-uid"
-    # UID = "test-uid-alt"
+    llm = ChatOpenAI(openai_api_key=openai_api_key, model_name="gpt-3.5-turbo", temperature=0)
+    reason_llm = ChatOpenAI(openai_api_key=openai_api_key, model_name="gpt-4", temperature=0)
+    embedding = OpenAIEmbeddings(openai_api_key=openai_api_key, model="text-embedding-ada-002")
+    es = Elasticsearch(**config['elastic'])
     UID = 'paper2graph'
 
-    # # serialize all of the above together
-    context = AgentContext(llm, embedding, es, UID)
-
-    # provision our data sources
-    # (knowledgebase is provided by default but initialized here for debug)
-    # kb = KnowledgeBase(context)
+    context = AgentContext(llm, reason_llm, embedding, es, UID)
     providers = []
+    return Assistant(context, providers, verbose=True)
 
-    # create assistant
-    assistant = Assistant(context, providers, verbose=True)
 
-    log_msg(f'Simon initialized. Querying Simon...')
-
+async def query_simon(client, query):
+    log_msg(f'Querying Simon with query: "{query}"')
     a = time.time()
-    assistant_result = await asyncio.to_thread(lambda: assistant(query))
+    result = await asyncio.to_thread(lambda: client(query))
     b = time.time()
-    res_for_logs = json.dumps(assistant_result, sort_keys=True, indent=2)
+    res_for_logs = json.dumps(result, indent=2)
     log_msg(f'Simon query completed in {(a-b):.2f} seconds. Result:\n{res_for_logs}')
 
-    return assistant_result
+    return result
 
 
 if __name__ == '__main__':
-    sys.path.insert(0, '/home/phillip/Code/simon')
+    config = utils.environment.load_config()
+    utils.setup_logger(**config['logger'])
+    log_msg('Logger initialized')
 
-    env_vars = environment.get_env_vars()
-    KEY = env_vars.get("OPENAI_KEY")
-    ES_CONFIG = env_vars.get('ES_CONFIG')
+    client = make_simon_client(config)
 
-    llm = ChatOpenAI(openai_api_key=KEY, model_name="gpt-4", temperature=0)
-    # llm = OpenAI(openai_api_key=KEY, model_name="gpt-4")
-    embedding = OpenAIEmbeddings(openai_api_key=KEY, model="text-embedding-ada-002")
-
-    # db
-    es = Elasticsearch(**ES_CONFIG)
-    # UID = "test-uid"
-    # UID = "test-uid-alt"
-    UID = 'ingest_files'
-
-    # # serialize all of the above together
-    context = AgentContext(llm, embedding, es, UID)
-
-    # provision our data sources (knowledgebase is provided by default
-    # but initialized here for debug)
-    kb = KnowledgeBase(context)
-    providers = []
-
-    # create assistant
-    assistant = Assistant(context, providers, verbose=True)
-
-    a = time.time()
-    assistant_result = assistant("What do I know about vestibular migraines?")
-    b = time.time()
-    print(json.dumps(assistant_result, sort_keys=True, indent=4))
-
-    print(b - a)
+    start_time = time.time()
+    result = client("What do I know about vestibular migraines?")
+    end_time = time.time()
+    print(f'Simon query completed in {end_time - start_time:.2f} seconds')
+    print(f'Query result:\n{json.dumps(result, indent=2)}')

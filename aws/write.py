@@ -4,10 +4,9 @@ Utilities for accesing AWS services.
 from datetime import datetime
 import os
 
-import boto3
-
 from utils import log_msg
 
+from .common import get_s3_client
 from .uri import parse_s3_uri
 
 
@@ -36,7 +35,7 @@ def create_output_dir_for_job(data_source, output_uri, dry_run=False):
 
     log_msg(
         f'Creating a subdirectory for job output at s3://{bucket}/{output_path}')
-    s3_client = boto3.client('s3')
+    s3_client = get_s3_client()
     response = s3_client.put_object(Bucket=bucket, Key=output_path)
 
     if response['ResponseMetadata']['HTTPStatusCode'] == 200:
@@ -60,7 +59,7 @@ def create_output_dir_for_file(output_uri, file_name, dry_run=False):
 
     log_msg(
         f'Creating a subdirectory for parse output of {file_name} at s3://{bucket}/{output_path}')
-    s3_client = boto3.client('s3')
+    s3_client = get_s3_client()
     response = s3_client.put_object(Bucket=bucket, Key=output_path)
 
     if response['ResponseMetadata']['HTTPStatusCode'] == 200:
@@ -75,7 +74,7 @@ def write_to_s3_file(output_uri, data):
     Write data to a file in S3.
     '''
     bucket, key = parse_s3_uri(output_uri)
-    s3_client = boto3.client('s3')
+    s3_client = get_s3_client()
     response = s3_client.put_object(Bucket=bucket, Key=key, Body=data)
     if response['ResponseMetadata']['HTTPStatusCode'] != 200:
         raise Exception(f'Error writing file to {key}', response)
@@ -86,7 +85,7 @@ def upload_to_s3(output_uri, file_path):
     Upload a file to S3.
     '''
     bucket, key = parse_s3_uri(output_uri)
-    s3_client = boto3.client('s3')
+    s3_client = get_s3_client()
     s3_client.upload_file(file_path, bucket, key)
 
 
@@ -96,13 +95,13 @@ def create_new_batch_set_dir(base_dir_uri):
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
     # Assemble the full path for the output directory we're creating
-    output_path = f'{base_dir_path}/{timestamp}-web-search-upload/'
+    output_path = f'{base_dir_path}/{timestamp}-web-search-upload'
     # If base_dir_path is empty (making new dir at bucket base), we'll have a leading slash we need to trim
     output_path = output_path.lstrip('/')
 
     log_msg(
         f'Creating a subdirectory for job output at s3://{bucket}/{output_path}')
-    s3_client = boto3.client('s3')
+    s3_client = get_s3_client()
     response = s3_client.put_object(Bucket=bucket, Key=output_path)
 
     if response['ResponseMetadata']['HTTPStatusCode'] == 200:

@@ -67,7 +67,9 @@ def upload_batch_set(files, base_dir='s3://paper2graph-parse-inputs/web-search-s
 
     for f in files:
         try:
-            aws.upload_to_s3(new_batch_set_uri, f)
+            file_name = os.path.basename(f)
+            new_file_uri = new_batch_set_uri + '/' + file_name
+            aws.upload_to_s3(new_file_uri, f)
         except Exception as e:
             log_msg(f'Error uploading file {f} to batch set {new_batch_set_uri}: {e}')
             return {'error': f'Error uploading file {f} to batch set {new_batch_set_uri}: {e}'}

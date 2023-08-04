@@ -3,10 +3,9 @@ Utilities for accesing AWS services.
 '''
 import os
 
-import boto3
-
 from utils import log_msg
 
+from .common import get_s3_client
 from .uri import parse_s3_uri
 
 
@@ -17,7 +16,7 @@ def get_objects_at_s3_uri(uri):
     bucket_name, path = parse_s3_uri(uri)
     if not bucket_name:
         raise Exception(f'Invalid S3 URI: {uri}')
-    s3_client = boto3.client('s3')
+    s3_client = get_s3_client()
     response = s3_client.list_objects_v2(
         Bucket=bucket_name, Prefix=path, Delimiter='/')
 
@@ -52,7 +51,7 @@ def get_objects_by_folder_at_s3_uri(uri):
     bucket_name, path = parse_s3_uri(uri)
     if not bucket_name:
         raise Exception(f'Invalid S3 URI: {uri}')
-    s3_client = boto3.client('s3')
+    s3_client = get_s3_client()
     response = s3_client.list_objects_v2(
         Bucket=bucket_name, Prefix=path, Delimiter='/')
 
@@ -87,7 +86,7 @@ def read_file_from_s3(uri):
     bucket, path = parse_s3_uri(uri)
     file_name = os.path.basename(path)
 
-    s3_client = boto3.client('s3')
+    s3_client = get_s3_client()
     response = s3_client.get_object(Bucket=bucket, Key=path)
     file_data = response['Body'].read().decode('utf-8')
 
