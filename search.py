@@ -60,15 +60,16 @@ def upload_batch_set(files, base_dir='s3://paper2graph-parse-inputs/web-search-s
         return {'error': 'Unknown files', 'detail': missing_files}
 
     try:
-        new_batch_set_uri = aws.create_new_batch_set_dir(base_dir_uri=base_dir)
+        new_batch_set_uri = aws.create_new_batch_set_dir(base_dir_uri=base_dir).rstrip("/")
     except Exception as e:
         log_msg(f'Error creating folder for new batch set: {e}')
         return {'error': f'Error creating folder for new batch set: {e}'}
 
-    for f in files:
+    for i, f in enumerate(files):
         try:
             file_name = os.path.basename(f)
             new_file_uri = new_batch_set_uri + '/' + file_name
+            log_msg(f'Uploading file {file_name} to {new_file_uri} ({i+1}/{len(files)})')
             aws.upload_to_s3(new_file_uri, f)
         except Exception as e:
             log_msg(f'Error uploading file {f} to batch set {new_batch_set_uri}: {e}')

@@ -30,11 +30,9 @@ async def gen_result_with_heartbeat(work_fn, log_label='function', heartbeat_int
             else:
                 log_msg(f'{log_label} still running, yielding connection heartbeat')
                 yield ' '
-                heartbeat_task = asyncio.create_task(asyncio.sleep(heartbeat_interval))
         except asyncio.CancelledError:
             log_msg(f'Client disconnected, cancelling {log_label} task')
             work_task.cancel()
-            heartbeat_task.cancel()
 
 
 async def make_response_with_heartbeat(work_fn, log_label='function', heartbeat_interval=10):

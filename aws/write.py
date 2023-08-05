@@ -95,7 +95,7 @@ def create_new_batch_set_dir(base_dir_uri):
     timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 
     # Assemble the full path for the output directory we're creating
-    output_path = f'{base_dir_path}/{timestamp}-web-search-upload'
+    output_path = f'{base_dir_path}/{timestamp}-web-search-upload/'
     # If base_dir_path is empty (making new dir at bucket base), we'll have a leading slash we need to trim
     output_path = output_path.lstrip('/')
 
