@@ -50,14 +50,20 @@ def _wrong_payload_response(message="wrong payload"):
     return {"translation": message}
 
 
+async def _render_template(template, **kwargs):
+    # Only show the search page if the PAPERS_DIR is configured
+    show_search_page = not not app.config.get('PAPERS_DIR')
+    return await render_template(template, show_search_page=show_search_page, **kwargs)
+
+
 @app.route('/')
 async def home():
-    return await render_template("index.html")
+    return await _render_template("index.html")
 
 
 @app.route('/extractor')
 async def extractor():
-    return await render_template("index.html")
+    return await _render_template("index.html")
 
 
 @app.route("/raw-parse", methods=["POST"])
@@ -123,7 +129,7 @@ async def save_to_neo():
 
 @app.route('/batch')
 async def batch_page():
-    return await render_template("batch.html")
+    return await _render_template("batch.html")
 
 
 @app.route('/batch-status')
@@ -207,7 +213,7 @@ async def batch_log():
 
 @app.route('/query')
 async def query_page():
-    return await render_template("query.html")
+    return await _render_template("query.html")
 
 
 @app.route('/query-simon', methods=["POST"])
