@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 
 import sentry_sdk
 from sentry_sdk.integrations.quart import QuartIntegration
@@ -16,18 +17,21 @@ import simon_client
 import utils
 from utils import log_msg
 
+# Unlike other config values, SENTRY_DSN is only ever set via environment variable
+# (mainly because it's annoying to have Sentry exception intercept/reporting running locally)
+SENTRY_DSN = os.environ.get('SENTRY_DSN', None)
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            QuartIntegration(),
+        ],
 
-sentry_sdk.init(
-    dsn="https://4226949e3a1d4812b5c26d55888d470d@o461205.ingest.sentry.io/4505326108999680",
-    integrations=[
-        QuartIntegration(),
-    ],
-
-    # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for performance monitoring.
-    # Sentry recommends adjusting this value in production.
-    traces_sample_rate=1.0
-)
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for performance monitoring.
+        # Sentry recommends adjusting this value in production.
+        traces_sample_rate=1.0
+    )
 
 
 app = Quart(__name__)
@@ -51,9 +55,11 @@ def _wrong_payload_response(message="wrong payload"):
 
 
 async def _render_template(template, **kwargs):
+    # Only include the Sentry reporting JS if server is configured to report backend errors
+    kwargs['include_sentry_js'] = not not SENTRY_DSN
     # Only show the search page if the PAPERS_DIR is configured
-    show_search_page = not not app.config.get('PAPERS_DIR')
-    return await render_template(template, show_search_page=show_search_page, **kwargs)
+    kwargs['show_search_page'] = not not app.config.get('PAPERS_DIR')
+    return await render_template(template, **kwargs)
 
 
 @app.route('/')
@@ -235,7 +241,7 @@ async def query_simon():
 
 @app.route('/search')
 async def search_page():
-    return await render_template("search.html")
+    return await _render_template("search.html")
 
 
 @app.route('/doc-search', methods=["POST"])

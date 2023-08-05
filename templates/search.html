@@ -119,7 +119,9 @@
         </div>
     </div>
 
+    {% if include_sentry_js %}
     <script src="https://js.sentry-cdn.com/4226949e3a1d4812b5c26d55888d470d.min.js" crossorigin="anonymous"></script>
+    {% endif %}
     <script src="{{ url_for('static', filename='search.js') }}"></script>
 </body>
 
