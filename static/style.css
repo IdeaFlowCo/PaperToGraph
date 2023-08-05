@@ -511,6 +511,16 @@ ul.results-list {
     color: #444;
 }
 
+.subtitle {
+    color: #666;
+    font-style: italic;
+}
+
+.title+.subtitle {
+    margin-top: -0.5em;
+    margin-bottom: 1.5em;
+}
+
 .row-container {
     display: flex;
     flex-direction: row;

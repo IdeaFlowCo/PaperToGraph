@@ -241,7 +241,8 @@ async def query_simon():
 
 @app.route('/search')
 async def search_page():
-    return await _render_template("search.html")
+    paper_count = '{:,}'.format(app.search_config['paper_count'])
+    return await _render_template("search.html", paper_count=paper_count)
 
 
 @app.route('/doc-search', methods=["POST"])
@@ -298,6 +299,26 @@ async def batch_job_setup():
 @app.before_serving
 async def simon_setup():
     app.simon_client = simon_client.SimonClient(app.config)
+
+
+@app.before_serving
+async def search_setup():
+    papers_dir = app.config.get('PAPERS_DIR', None)
+    if not papers_dir:
+        return
+
+    # Walk papers_dir and count all .txt files
+    # Only do this once, at server startup, because it may be slow for very large numbers of files
+    log_msg(f'Counting papers in {papers_dir} that will be available for /search...')
+    paper_count = 0
+    for _, _, files in os.walk(papers_dir):
+        paper_count += len([file for file in files if os.path.splitext(file)[1] == ".txt"])
+    log_msg(f'{paper_count:,} papers found!')
+
+    app.search_config = {
+        'papers_dir': papers_dir,
+        'paper_count': paper_count,
+    }
 
 
 if __name__ == '__main__':
