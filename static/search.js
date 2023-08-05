@@ -6,9 +6,17 @@
     const searchSpinner = document.querySelector("#search-loading-spinner");
     const searchErrorMsg = document.querySelector('#search-error-msg');
 
+    const matchingPapersLabel = document.querySelector("#matching-papers-label");
     const searchResultsList = document.querySelector("#search-results-list");
     const searchResultsPlaceholder = document.querySelector("#search-results-placeholder");
     const searchResultsEmpty = document.querySelector("#search-results-empty");
+
+    const searchPaginationControls = document.querySelector("#search-pagination-controls");
+    const searchResultsPagination = document.querySelector("#search-results-pagination");
+    const searchResultsPrevPage = document.querySelector("#search-results-prev-page");
+    const searchResultsNextPage = document.querySelector("#search-results-next-page");
+    const searchResultsFirstPage = document.querySelector("#search-results-first-page");
+    const searchResultsLastPage = document.querySelector("#search-results-last-page");
 
     const addToListButton = document.querySelector("#btn-add-to-list");
 
@@ -34,6 +42,9 @@
         return body;
     }
 
+    let filePages = [];
+    let curFilePage = 0;
+    const FILES_PER_PAGE = 10;
     const clearSearchResults = () => {
         // Hide any error messages from any previous requests
         searchResultsEmpty.classList.add('hidden');
@@ -46,6 +57,10 @@
 
         // Ensure placeholder is being shown again
         searchResultsPlaceholder.classList.remove('hidden');
+
+        filePages = [];
+        curFilePage = 0;
+        matchingPapersLabel.textContent = 'Matching papers';
     };
 
     const disableButtons = () => {
@@ -60,6 +75,128 @@
         addToListButton.disabled = !searchResultsList.innerHTML.trim();
         newBatchCreateButton.disabled = !newBatchList.value;
         newBatchDedupeButton.disabled = !newBatchList.value;
+    }
+
+    const displayCurFilePage = () => {
+        searchResultsList.innerHTML = '';
+        for (const file of filePages[curFilePage]) {
+            const title = file.title;
+            const path = file.path;
+            const resultLiEl = document.createElement('li');
+            resultLiEl.dataset.title = title;
+            resultLiEl.dataset.path = path;
+            resultLiEl.textContent = `${title} \u2014 ${path}`;
+            searchResultsList.appendChild(resultLiEl);
+        }
+
+        if (filePages.length > 1) {
+            rebuildPaginationList();
+            searchPaginationControls.classList.remove('hidden');
+        } else {
+            searchPaginationControls.classList.add('hidden');
+        }
+    }
+
+    const buildElipsesPageItemEl = () => {
+        const pageItemEl = document.createElement('li');
+        pageItemEl.classList.add('page-item');
+        pageItemEl.classList.add('disabled');
+        const pageLinkEl = document.createElement('a');
+        pageLinkEl.classList.add('page-link');
+        pageLinkEl.textContent = '...';
+        pageLinkEl.href = '#';
+        pageItemEl.appendChild(pageLinkEl);
+        return pageItemEl;
+    }
+
+    const buildPageItemEl = (pageNum) => {
+        const pageItemEl = document.createElement('li');
+        pageItemEl.classList.add('page-item');
+        const pageLinkEl = document.createElement('a');
+        pageLinkEl.classList.add('page-link');
+        pageLinkEl.textContent = pageNum + 1;
+        pageLinkEl.href = '#';
+        if (pageNum === curFilePage) {
+            pageLinkEl.classList.add('active');
+        } else {
+            pageLinkEl.addEventListener('click', () => {
+                curFilePage = pageNum;
+                displayCurFilePage();
+            });
+        }
+        pageItemEl.appendChild(pageLinkEl);
+        return pageItemEl
+    }
+
+    const rebuildPaginationList = () => {
+        searchResultsPagination.innerHTML = '';
+
+        if (curFilePage > 0) {
+            searchResultsPrevPage.classList.remove('disabled');
+            searchResultsFirstPage.classList.remove('disabled');
+        }
+        else {
+            searchResultsPrevPage.classList.add('disabled');
+            searchResultsFirstPage.classList.add('disabled');
+        }
+        searchResultsPagination.appendChild(searchResultsPrevPage);
+
+        if (curFilePage > 2) {
+            searchResultsFirstPage.classList.remove('disabled');
+            const elipsesItem = buildElipsesPageItemEl();
+            searchResultsPagination.appendChild(elipsesItem);
+        }
+        for (let i = Math.max(0, curFilePage - 2); i < Math.min(filePages.length, curFilePage + 3); i++) {
+            const pageItemEl = buildPageItemEl(i);
+            searchResultsPagination.appendChild(pageItemEl);
+        }
+        if (filePages.length - curFilePage > 3) {
+            const elipsesItem = buildElipsesPageItemEl();
+            searchResultsPagination.appendChild(elipsesItem);
+        }
+
+        if (curFilePage < filePages.length - 1) {
+            searchResultsNextPage.classList.remove('disabled');
+            searchResultsLastPage.classList.remove('disabled');
+        }
+        else {
+            searchResultsNextPage.classList.add('disabled');
+            searchResultsLastPage.classList.add('disabled');
+        }
+        searchResultsPagination.appendChild(searchResultsNextPage);
+    }
+
+    searchResultsPrevPage.addEventListener('click', () => {
+        if (curFilePage == 0) return;
+        curFilePage -= 1;
+        displayCurFilePage();
+    });
+    searchResultsFirstPage.addEventListener('click', () => {
+        if (curFilePage == 0) return;
+        curFilePage = 0;
+        displayCurFilePage();
+    });
+    searchResultsNextPage.addEventListener('click', () => {
+        if (curFilePage == filePages.length - 1) return;
+        curFilePage += 1;
+        displayCurFilePage();
+    });
+    searchResultsLastPage.addEventListener('click', () => {
+        if (curFilePage == filePages.length - 1) return;
+        curFilePage = filePages.length - 1;
+        displayCurFilePage();
+    });
+
+    const displayFileResults = (files) => {
+        searchPaginationControls.classList.add('hidden');
+        filePages = [];
+        for (let i = 0; i < files.length; i += FILES_PER_PAGE) {
+            filePages.push(files.slice(i, i + FILES_PER_PAGE));
+        }
+        curFilePage = 0;
+        displayCurFilePage();
+
+        searchResultsList.classList.remove('hidden');
     }
 
     searchButton.addEventListener('click', async () => {
@@ -84,24 +221,18 @@
             searchResultsPlaceholder.classList.add('hidden');
             searchSpinner.classList.add('hidden');
 
-            const foundFiles = parsedResponse.files;
+            let foundFiles = parsedResponse.files;
             if (!foundFiles || !foundFiles.length) {
                 searchResultsEmpty.classList.remove('hidden');
                 resetButtonStates();
                 return;
             }
-
-            for (const file of foundFiles) {
-                const title = file.title;
-                const path = file.path;
-                const resultLiEl = document.createElement('li');
-                resultLiEl.dataset.title = title;
-                resultLiEl.dataset.path = path;
-                resultLiEl.textContent = `${title} \u2014 ${path}`;
-                searchResultsList.appendChild(resultLiEl);
-            }
-
-            searchResultsList.classList.remove('hidden');
+            foundFiles = foundFiles.sort(
+                // Sort by paper ID; first by length, then alphanumerically (so that PMC10* IDs come after PMC9* IDs)
+                (a, b) => a.title.length != b.title.length ? a.title.length - b.title.length : a.title.localeCompare(b.title)
+            );
+            matchingPapersLabel.textContent = `${foundFiles.length} papers found`;
+            displayFileResults(foundFiles);
             resetButtonStates();
         } catch (e) {
             console.error(e);
@@ -113,9 +244,13 @@
 
     addToListButton.addEventListener('click', async () => {
         disableButtons();
-        for (const resultEl of searchResultsList.children) {
-            newBatchList.value = (newBatchList.value.trim() + '\n' + resultEl.dataset.path).trim();
+        let newFilesString = '';
+        for (const filePage of filePages) {
+            for (const file of filePage) {
+                newFilesString += file.path + '\n';
+            }
         }
+        newBatchList.value = (newBatchList.value.trim() + '\n' + newFilesString).trim();
         resetButtonStates();
     });
 

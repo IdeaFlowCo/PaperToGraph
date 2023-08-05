@@ -559,6 +559,52 @@ ul.results-list {
     border-radius: 0.25rem;
 }
 
+.pagination {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    flex-grow: 0;
+    flex-shrink: 1;
+    list-style: none;
+
+    margin: 0;
+    margin-top: 1em;
+    padding: 0;
+}
+
+.page-link {
+    display: block;
+    background-color: transparent;
+    padding: 4px 8px;
+    color: var(--primary-color);
+    text-decoration: none;
+
+    border: 1px solid var(--primary-color);
+    font-size: 12px;
+}
+
+.page-item .page-link {
+    border-right: 0;
+}
+
+.page-item:first-child .page-link {
+    border-top-left-radius: 5px;
+    border-bottom-left-radius: 5px;
+}
+
+.page-item:last-child .page-link {
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-right: 1px solid;
+}
+
+.disabled>.page-link {
+    color: grey;
+    border-color: grey;
+    pointer-events: none;
+}
+
 /* Success message */
 .success-msg {
     width: fit-content;
