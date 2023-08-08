@@ -1,7 +1,8 @@
+import json
 import os
 
 from dotenv import dotenv_values
-from quart import Quart
+from .logging import log_msg
 
 
 def load_config(cl_args=None):
@@ -54,11 +55,6 @@ def load_config(cl_args=None):
     return config_vars
 
 
-def configure_app(app: Quart, cl_args=None):
-    config = load_config(cl_args=cl_args)
-    app.config.update(config)
-
-
 def add_neo_credential_override_args(parser):
     parser.add_argument(
         '--neo_uri', help="The URI for the Neo4j instance to save loaded data to.")
@@ -66,3 +62,37 @@ def add_neo_credential_override_args(parser):
         '--neo_user', help='The username to use when connecting to the Neo4j database')
     parser.add_argument(
         '--neo_pass', help='The password to use when connecting to the Neo4j database')
+
+
+def _secret_to_log_str(secret):
+    return f'{secret[:3]}...{secret[-3:]}'
+
+
+def log_config_vars(config):
+    logger_config = config['logger'].copy()
+
+    aws_config = config['aws'].copy()
+    if 'aws_secret_access_key' in aws_config and aws_config['aws_secret_access_key']:
+        aws_config['aws_secret_access_key'] = _secret_to_log_str(aws_config['aws_secret_access_key'])
+    if 'aws_session_token' in aws_config and aws_config['aws_session_token']:
+        aws_config['aws_session_token'] = _secret_to_log_str(aws_config['aws_session_token'])
+
+    neo_config = config['neo4j'].copy()
+    if 'password' in neo_config and neo_config['password']:
+        neo_config['password'] = _secret_to_log_str(neo_config['password'])
+
+    es_config = config['elastic']
+    if 'basic_auth' in es_config and es_config['basic_auth']:
+        es_config['basic_auth'] = (
+            es_config['basic_auth'][0],
+            _secret_to_log_str(es_config['basic_auth'][1])
+        )
+
+    configs_to_log = {
+        'logger': logger_config,
+        'aws': aws_config,
+        'neo4j': neo_config,
+        'es': es_config,
+    }
+    configs_to_log = json.dumps(configs_to_log, indent=2)
+    log_msg(f'Using the following configuration:\n{configs_to_log}')

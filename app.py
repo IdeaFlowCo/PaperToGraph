@@ -287,8 +287,7 @@ async def make_new_doc_set():
 async def server_setup():
     utils.setup_logger(**app.config['logger'])
     log_msg('Logger initialized')
-
-    aws.check_for_env_vars(throw_if_missing=False)
+    utils.log_config_vars(app.config)
 
 
 @app.before_serving
