@@ -81,7 +81,7 @@ def log_config_vars(config):
     if 'password' in neo_config and neo_config['password']:
         neo_config['password'] = _secret_to_log_str(neo_config['password'])
 
-    es_config = config['elastic']
+    es_config = config['elastic'].copy()
     if 'basic_auth' in es_config and es_config['basic_auth']:
         es_config['basic_auth'] = (
             es_config['basic_auth'][0],
