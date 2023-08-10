@@ -1,4 +1,5 @@
 import asyncio
+import csv
 import json
 import os
 import subprocess
@@ -23,29 +24,66 @@ def search_docs(query, papers_dir=None):
     output, error = grep_process.communicate()
     grep_et = time.time()
     log_msg(f'Parallelized grep search for {query} in {papers_dir} completed in {(grep_et - grep_st):.2f} seconds')
-    # log_msg(output)
-    # log_msg(error)
 
+    # TODO: Figure out why return code is always 12 for some reason (probably related to use of `parallel`` ?)
     # log_msg(f'grep_process.returncode: {grep_process.returncode}')
     # if grep_process.returncode != 0:
     #     print("Grep process failed.")
     #     return []
 
-    # output = output.decode('utf-8').strip().splitlines()
     output = output.strip().splitlines()
     files_with_matches = [line.split(':')[0] for line in output if int(line.split(':')[1]) > 0]
     log_debug(f'Files with matches: {files_with_matches}')
 
     structured_result = [
-        {'title': os.path.basename(f).rstrip('.txt'), 'path': f} for f in files_with_matches
+        {'pmc_id': os.path.basename(f).rstrip('.txt'), 'path': f} for f in files_with_matches
     ]
     return structured_result
 
 
-async def asearch_docs(query, papers_dir=None):
+def load_metadata_as_dict(metadata_file):
+    log_msg(f'Loading paper metadata from {metadata_file}')
+    paper_metadata = {}
+    with open(metadata_file, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            paper_metadata[row['pmc_id']] = {
+                'title': row.get('article_title', None),
+                'article_type': row.get('article_type', None),
+                'doi': row.get('doi', None),
+            }
+    return paper_metadata
+
+
+def add_metadata_to_docs_list(docs, metadata_file):
+    metadata = load_metadata_as_dict(metadata_file)
+    for doc in docs:
+        doc_md = metadata.get(doc['pmc_id'], None)
+        if not doc_md:
+            log_msg(f'No metadata found for {doc["pmc_id"]}')
+            continue
+        # Filter out empty values
+        doc_md = {k: v for k, v in doc_md.items() if v}
+        doc.update(doc_md)
+    return docs
+
+
+async def asearch_docs(query, papers_dir=None, metadata_file=None):
     log_msg(f'Running async search for "{query}" in {papers_dir}')
+    search_st = time.time()
     search_results = await asyncio.to_thread(lambda: search_docs(query, papers_dir=papers_dir))
-    log_msg(search_results)
+    search_et = time.time()
+    log_msg(f'search_docs call completed in {(search_et - search_st):.2f} seconds')
+
+    if metadata_file:
+        metadata_st = time.time()
+        search_results = await asyncio.to_thread(lambda: add_metadata_to_docs_list(search_results, metadata_file))
+        metadata_et = time.time()
+        log_msg(f'Added metadata for {len(search_results)} search results in {(metadata_et - metadata_st):.2f} seconds')
+    else:
+        log_msg(f'No metadata file provided, skipping metadata lookup')
+
+    log_debug(search_results)
     return {'files': search_results}
 
 

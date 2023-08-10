@@ -251,8 +251,7 @@ async def doc_search():
     log_msg('POST request to /doc-search endpoint')
     _log_args(post)
 
-    papers_dir = app.config.get('PAPERS_DIR')
-    if not papers_dir:
+    if not app.search_config:
         return jsonify({'status': 'error', 'message': 'PAPERS_DIR not configured'}), 500
 
     required_args = ['query']
@@ -260,8 +259,10 @@ async def doc_search():
         return jsonify(_wrong_payload_response()), 400
 
     query = post.get('query')
+    papers_dir = app.search_config['papers_dir']
+    metadata_file = app.search_config['metadata_file']
     return await utils.make_response_with_heartbeat(
-        search.asearch_docs(query, papers_dir=papers_dir),
+        search.asearch_docs(query, papers_dir=papers_dir, metadata_file=metadata_file),
         log_label='Doc search'
     )
 
@@ -304,6 +305,7 @@ async def simon_setup():
 async def search_setup():
     papers_dir = app.config.get('PAPERS_DIR', None)
     if not papers_dir:
+        log_msg('PAPERS_DIR not configured, /search will not be available')
         return
 
     # Walk papers_dir and count all .txt files
@@ -317,7 +319,9 @@ async def search_setup():
     app.search_config = {
         'papers_dir': papers_dir,
         'paper_count': paper_count,
+        'metadata_file': app.config.get('PAPERS_METADATA_FILE', None)
     }
+    log_msg(f'Search config: {app.search_config}')
 
 
 if __name__ == '__main__':

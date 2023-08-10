@@ -73,19 +73,39 @@
     const resetButtonStates = () => {
         searchButton.disabled = false;
         addToListButton.disabled = !searchResultsList.innerHTML.trim();
-        newBatchCreateButton.disabled = !newBatchList.value;
-        newBatchDedupeButton.disabled = !newBatchList.value;
+        newBatchCreateButton.disabled = !newBatchList.innerHTML.trim();
+        newBatchDedupeButton.disabled = !newBatchList.innerHTML.trim();
     }
 
     const displayCurFilePage = () => {
         searchResultsList.innerHTML = '';
         for (const file of filePages[curFilePage]) {
+            const pmcId = file.pmcId;
+            const articleType = file.articleType;
             const title = file.title;
+            const doi = file.doi;
             const path = file.path;
             const resultLiEl = document.createElement('li');
-            resultLiEl.dataset.title = title;
-            resultLiEl.dataset.path = path;
-            resultLiEl.textContent = `${title} \u2014 ${path}`;
+            const pmcIdEl = document.createElement('span');
+            pmcIdEl.classList.add('pmc-id');
+            pmcIdEl.textContent = pmcId;
+            resultLiEl.appendChild(pmcIdEl);
+            const articleTypeEl = document.createElement('span');
+            articleTypeEl.classList.add('article-type');
+            articleTypeEl.textContent = articleType;
+            resultLiEl.appendChild(articleTypeEl);
+            const titleEl = document.createElement('span');
+            titleEl.classList.add('article-title');
+            titleEl.textContent = title;
+            titleEl.title = title;
+            resultLiEl.appendChild(titleEl);
+            // const doiEl = document.createElement('span');
+            // doiEl.textContent = doi;
+            // resultLiEl.appendChild(doiEl);
+            // const pathEl = document.createElement('span');
+            // pathEl.classList.add('article-path');
+            // pathEl.textContent = path;
+            // resultLiEl.appendChild(pathEl);
             searchResultsList.appendChild(resultLiEl);
         }
 
@@ -227,9 +247,19 @@
                 resetButtonStates();
                 return;
             }
+            foundFiles = foundFiles.map(file => {
+                // PMC ID and Path will always be provided; other fields may be missing
+                const pmcId = file.pmc_id;
+                const path = file.path;
+
+                const title = file.title || '[Title not found]';
+                const articleType = file.article_type || '[Type not found]';
+                const doi = file.doi || '[DOI not found]';
+                return { pmcId, path, title, articleType, doi };
+            });
             foundFiles = foundFiles.sort(
                 // Sort by paper ID; first by length, then alphanumerically (so that PMC10* IDs come after PMC9* IDs)
-                (a, b) => a.title.length != b.title.length ? a.title.length - b.title.length : a.title.localeCompare(b.title)
+                (a, b) => a.pmcId.length != b.pmcId.length ? a.pmcId.length - b.pmcId.length : a.pmcId.localeCompare(b.pmcId)
             );
             matchingPapersLabel.textContent = `${foundFiles.length} papers found`;
             displayFileResults(foundFiles);
@@ -240,27 +270,40 @@
             searchErrorMsg.classList.remove('hidden');
             resetButtonStates();
         }
-    });
+    })
+
+    const trimNewBatchList = () => {
+        const newBatchItems = newBatchList.innerHTML.split('<br>')
+            .filter((row) => !!row) // Remove empty rows
+            .map((row) => row.trim()) // Trim whitespace from every row
+            ;
+        newBatchList.innerHTML = newBatchItems.join('<br>');
+    };
 
     addToListButton.addEventListener('click', async () => {
         disableButtons();
         let newFilesString = '';
         for (const filePage of filePages) {
             for (const file of filePage) {
-                newFilesString += file.path + '\n';
+                newFilesString += file.path + '\t' + file.title + '<br>';
             }
         }
-        newBatchList.value = (newBatchList.value.trim() + '\n' + newFilesString).trim();
+        newBatchList.innerHTML = newBatchList.innerHTML + '<br>' + newFilesString;
+        trimNewBatchList();
         resetButtonStates();
     });
 
     newBatchList.addEventListener('blur', async () => {
-        newBatchList.value = newBatchList.value.trim();
+        trimNewBatchList();
         resetButtonStates();
     });
 
     const buildNewBatchRequestBody = () => {
-        const batchItems = newBatchList.value.split('\n').map((item) => item.trim());
+        const batchItems = newBatchList.innerHTML.split('<br>').map((row) => {
+            if (row.indexOf('\t') == -1) return row.trim();
+            const path = row.split('\t')[0];
+            return path.trim()
+        });
         const body = {
             'files': batchItems,
         };
@@ -320,11 +363,11 @@
 
     newBatchDedupeButton.addEventListener('click', async () => {
         disableButtons();
-        const batchItems = newBatchList.value.split('\n').map((item) => item.trim()).filter((item) => !!item);
-        // Dedupe then sort; first by length, then alphanumerically (so that PMC10* IDs come after PMC9* IDs)
-        newBatchList.value = [...new Set(batchItems)].sort(
-            (a, b) => a.length != b.length ? a.length - b.length : a.localeCompare(b)
-        ).join('\n');
+        const batchItems = newBatchList.innerHTML.split('<br>')
+            .map((row) => row.trim())
+            .filter((item) => !!item);
+        // Dedupe then sort
+        newBatchList.innerHTML = [...new Set(batchItems)].sort().join('<br>');
         resetButtonStates();
     });
 

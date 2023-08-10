@@ -459,9 +459,34 @@ ul.results-list {
 }
 
 .results-list li {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
     font-size: 15px;
     border: 1px solid #999;
     padding: 0.5em 1em;
+}
+
+.results-list li span+span {
+    margin-left: 1ch;
+}
+
+.results-list .pmc-id {
+    flex-shrink: 0;
+    width: 110px;
+}
+
+.results-list .article-type {
+    flex-shrink: 0;
+    width: 140px;
+}
+
+
+.results-list .article-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .results-list li+li {
@@ -482,6 +507,9 @@ ul.results-list {
     box-sizing: border-box;
     width: 100%;
     max-width: 100%;
+    max-height: 600px;
+    overflow: auto;
+
     margin-top: 0;
 
     border: 1px solid #999;
