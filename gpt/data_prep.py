@@ -195,4 +195,4 @@ def fetch_training_data_for_text(input, model="gpt-3.5-turbo", prompt_override=N
             'source_text': input,
             'training_data': result
         }
-        yield json.dumps(structured_result, indent=2)
+        yield json.dumps(structured_result)
