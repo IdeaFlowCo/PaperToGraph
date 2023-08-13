@@ -9,7 +9,7 @@ import sys
 import threading
 import xml.etree.ElementTree as ET
 
-sys.path.append('../')
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import gpt
 
 
@@ -168,8 +168,12 @@ def _process_files(
     logging.info(f'Processing {len(files)} files...')
     for i, f in enumerate(files):
         logging.info(f'Processing file {i+1}/{len(files)}: {f}')
-        for data_chunk in _proccess_file(f, **kwargs):
-            output_queue.put(data_chunk)
+        try:
+            for data_chunk in _proccess_file(f, **kwargs):
+                output_queue.put(data_chunk)
+        except Exception as e:
+            logging.error(f'Error processing file {f}: {e}')
+            continue
 
 
 def _make_worker(work_args={}, logger_args={}):
