@@ -121,42 +121,54 @@ def _extract_text_from_el(element):
     return ''.join(text_list)
 
 
-def _proccess_file(file_path, gpt_model='gpt-3.5-turbo'):
+def _proccess_file(
+        file_path,
+        gpt_model='gpt-3.5-turbo',
+        abstracts_only=False,
+        extract_text_only=False,
+        **kwargs):
     tree = ET.parse(file_path)
     root = tree.getroot()
 
     abstract = root.find('.//abstract')
-
-    a_paragraphs = abstract.findall('.//p')
-    a_text = [_extract_text_from_el(p) for p in a_paragraphs]
+    if abstract:
+        a_text = [_extract_text_from_el(p) for p in abstract.findall('.//p')]
+    else:
+        logging.warning(f'No <abstract> tag found in file {file_path}')
+        a_text = []
 
     body = root.find('.//body')
-    b_paragraphs = body.findall('.//p')
-    b_text = [_extract_text_from_el(p) for p in b_paragraphs]
+    if body:
+        b_text = [_extract_text_from_el(p) for p in body.findall('.//p')]
+    else:
+        logging.warning(f'No <body> tag found in file {file_path}')
+        b_text = []
 
-    paragraphs = [*a_text, *b_text]
-    for p in paragraphs:
-        p_result = asyncio.run(
-            gpt.data_prep.fetch_training_data_for_text(
-                p,
-                model=gpt_model
-            ))
-        logging.debug(f'GPT results for paragraph: {p_result}')
-        if isinstance(p_result, list):
-            for r in p_result:
-                yield r
-        elif isinstance(p_result, str):
-            yield p_result
-        else:
-            logging.warning(
-                f'Unexpected result type from fetch_training_data_for_text: {type(p_result)}')
+    if abstracts_only:
+        paragraphs = a_text
+    else:
+        paragraphs = [*a_text, *b_text]
+
+    if extract_text_only:
+        yield f'### {file_path}\n'
+        yield from paragraphs
+        yield '###\n\n'
+        return
+
+    yield from gpt.data_prep.fetch_training_data_for_text(
+        paragraphs,
+        model=gpt_model
+    )
 
 
-def _process_files(files=[], gpt_model='gpt-3.5-turbo', output_queue=None):
+def _process_files(
+        files=[],
+        output_queue=None,
+        **kwargs):
     logging.info(f'Processing {len(files)} files...')
     for i, f in enumerate(files):
         logging.info(f'Processing file {i+1}/{len(files)}: {f}')
-        for data_chunk in _proccess_file(f, gpt_model=gpt_model):
+        for data_chunk in _proccess_file(f, **kwargs):
             output_queue.put(data_chunk)
 
 
@@ -207,7 +219,9 @@ def main(args):
         worker = _make_worker(
             work_args={
                 'files': segment,
+                'abstracts_only': args.abstracts_only,
                 'gpt_model': args.gpt_model,
+                'extract_text_only': args.extract_text_only,
                 'output_queue': output_queue,
             },
             logger_args={
@@ -236,9 +250,21 @@ def parse_args(args):
     parser = argparse.ArgumentParser(description='Extract article metadata from XML')
 
     parser.add_argument(
+        '--abstracts_only',
+        action='store_true',
+        default=False,
+        help='Only process abstracts from articles, ignoring the body text'
+    )
+    parser.add_argument(
         '--gpt_model',
         default='gpt-3.5-turbo',
         help='Name of the GPT model to use'
+    )
+    parser.add_argument(
+        '--extract_text_only',
+        action='store_true',
+        default=False,
+        help="Only extract text from the XML files, don't process with GPT"
     )
     parser.add_argument(
         '--log_file',

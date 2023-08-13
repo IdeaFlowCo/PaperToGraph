@@ -2,6 +2,8 @@
 Code for transforming text into a Q&A format that can be used to train LLMs.
 '''
 
+import asyncio
+import json
 import os
 import time
 
@@ -150,7 +152,7 @@ def input_to_sized_list(input, model):
     return resized_list
 
 
-async def fetch_training_data_for_text(input, model="gpt-3.5-turbo", prompt_override=None):
+def fetch_training_data_for_text(input, model="gpt-3.5-turbo", prompt_override=None):
     '''
     Retrieve parse response from GPT for given block of text.
     '''
@@ -169,7 +171,6 @@ async def fetch_training_data_for_text(input, model="gpt-3.5-turbo", prompt_over
     input_list = input_to_sized_list(input, model=model)
     log_debug(f'Input broken into {len(input_list)} chunks.')
 
-    results = []
     for i, input in enumerate(input_list):
         log_msg(f'Fetching training data for input chunk {i + 1} of {len(input_list)}')
         max_tokens = _get_output_reservation(model, input)
@@ -178,17 +179,20 @@ async def fetch_training_data_for_text(input, model="gpt-3.5-turbo", prompt_over
             {"role": "user", "content": input}
         ]
         start_time = time.time()
-        result = await async_fetch_from_openai(
-            messages,
-            log_label='Data prep',
-            model=model,
-            max_tokens=max_tokens,
-            timeout=timeout,
-            expect_json_result=False
-        )
+        result = asyncio.run(
+            async_fetch_from_openai(
+                messages,
+                log_label='Data prep',
+                model=model,
+                max_tokens=max_tokens,
+                timeout=timeout,
+                expect_json_result=False
+            ))
         end_time = time.time()
         time_spent = end_time - start_time
         log_msg(f'Training data fetched in {time_spent:.2f} seconds.')
-        results.append(result)
-
-    return results
+        structured_result = {
+            'source_text': input,
+            'training_data': result
+        }
+        yield json.dumps(structured_result, indent=2)
