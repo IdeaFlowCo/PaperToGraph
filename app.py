@@ -66,6 +66,10 @@ async def _render_template(template, **kwargs):
 async def home():
     return await _render_template("index.html")
 
+@app.route('/hackathon')
+async def hackathon():
+    return await _render_template("hackathon.html")
+
 
 @app.route('/extractor')
 async def extractor():

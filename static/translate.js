@@ -7,6 +7,7 @@
 
     // const translate = document.querySelector("#btn-translate");
     const rawParseButton = document.querySelector("#btn-raw-parse");
+
     const translateSpinner = document.querySelector("#translate-loading");
 
     const translateErrorMsg = document.querySelector('#translate-error');
@@ -14,6 +15,17 @@
     const translateOutput = document.querySelector("#output-translate");
 
     const saveToNeoBtn = document.querySelector("#btn-save-to-neo");
+
+    // Hackathon
+    const promptButton = document.querySelector("#btn-prompt-parse");
+
+    const promptForm = document.getElementById("promptForm");
+    
+    function preventFormSubmit(event) {
+        event.preventDefault();
+    }
+
+    promptForm.addEventListener("submit", preventFormSubmit);
 
 
     function buildBodyForTranslate() {
@@ -50,6 +62,34 @@
         saveToNeoBtn.disabled = false;
     }
 
+    async function handlePromptClick() {
+        const response = await fetch('raw-parse', {
+            method: 'POST',
+            mode: 'cors',
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(buildBodyForTranslate())
+        });
+
+        try {
+            const parsedResponse = await response.json();
+            console.log('Parsed response json:', parsedResponse);
+
+            const output = parsedResponse.translation;
+            translateOutput.value = JSON.stringify(output, null, 2);
+
+            // hideSpinnerForTranslate();
+
+        } catch (e) {
+            // hideSpinnerForTranslate();
+            translateErrorMsg.style.display = 'block';
+
+            console.error(e);
+        }
+    }
+    promptButton.addEventListener("click", handlePromptClick);
+
 
     async function handleRawParseClick() {
         translateErrorMsg.style.display = 'none';
@@ -80,7 +120,9 @@
             console.error(e);
         }
     }
-    rawParseButton.addEventListener("click", handleRawParseClick);
+    if (rawParseButton) {
+        rawParseButton.addEventListener("click", handleRawParseClick);
+    }
 
 
     function humanByteSize(numBytes) {
@@ -133,11 +175,15 @@
     };
 
     document.addEventListener('DOMContentLoaded', function () {
-        overridePromptCheckbox.addEventListener('change', handlePromptOverrideCheck);
-        translateInput.value = translateInput.value.trim();
-        calcInputTextLength();
-        calcInputWordCount();
-        translateInput.addEventListener('change', calcInputTextLength);
-        translateInput.addEventListener('change', calcInputWordCount);
+        if (overridePromptCheckbox) {
+            overridePromptCheckbox.addEventListener('change', handlePromptOverrideCheck);
+        }
+        if (translateInput) {
+            translateInput.value = translateInput.value.trim();
+            calcInputTextLength();
+            calcInputWordCount();
+            translateInput.addEventListener('change', calcInputTextLength);
+            translateInput.addEventListener('change', calcInputWordCount);
+        }
     });
 })();
