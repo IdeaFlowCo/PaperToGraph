@@ -8,7 +8,7 @@ from .logging import log_msg
 def load_config(cl_args=None):
     if cl_args:
         # Convert commandline args to uppercase to match the format of environment variables
-        cl_args = {key.upper(): value for key, value in vars(cl_args).items()}
+        cl_args = {key.upper(): value for key, value in vars(cl_args).items() if value}
     else:
         cl_args = {}
 
@@ -57,11 +57,17 @@ def load_config(cl_args=None):
 
 def add_neo_credential_override_args(parser):
     parser.add_argument(
-        '--neo_uri', help="The URI for the Neo4j instance to save loaded data to.")
+        '--neo_uri',
+        default=None,
+        help="The URI for the Neo4j instance to save loaded data to.")
     parser.add_argument(
-        '--neo_user', help='The username to use when connecting to the Neo4j database')
+        '--neo_user',
+        default=None,
+        help='The username to use when connecting to the Neo4j database')
     parser.add_argument(
-        '--neo_pass', help='The password to use when connecting to the Neo4j database')
+        '--neo_pass',
+        default=None,
+        help='The password to use when connecting to the Neo4j database')
 
 
 def _secret_to_log_str(secret):

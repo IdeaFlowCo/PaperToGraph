@@ -75,7 +75,7 @@ def update_node_source_dates(neo4j_driver, source_dates):
                     "UNWIND $nodes_data as node "
                     "MATCH (n:Entity {normalized_name: node.name}) "
                     "SET "
-                    '  n._EARLIEST_SOURCE_DATE = "UNKNOWN",'
+                    "  n._EARLIEST_SOURCE_DATE = datetime(node.date),"
                     "  n.last_modified = datetime($timestamp)",
                     nodes_data=nodes_with_date_data,
                     timestamp=mod_timestamp)
@@ -106,7 +106,7 @@ def update_node_source_dates(neo4j_driver, source_dates):
             "UNWIND $nodes_data as node "
             "MATCH (n:Entity {normalized_name: node.name}) "
             "SET "
-            '  n._EARLIEST_SOURCE_DATE = "UNKNOWN",'
+            "  n._EARLIEST_SOURCE_DATE = datetime(node.date),"
             "  n.last_modified = datetime($timestamp)",
             nodes_data=nodes_with_date_data,
             timestamp=mod_timestamp)
