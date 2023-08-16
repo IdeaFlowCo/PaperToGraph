@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-white">
+
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-MD6L3WYG0S"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-MD6L3WYG0S');
+  </script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RareDisease.Guru</title>
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://kit.fontawesome.com/1a48924413.js" crossorigin="anonymous"></script>
+</head>
+
+<body class="h-full">
+
+
+  <div class="min-h-full">
+    <nav class="bg-white">
+      <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div class="flex h-16 justify-between mt-4 rounded-tr-xl rounded-bl-xl" style="background-color:#2A4DD0;">
+          <div class="flex">
+            <div class="flex flex-shrink-0 items-center">
+              <svg width="50" height="50" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M25 8C21.6981 8 19 10.6981 19 14C19 16.0938 20.0829 17.957 21.7188 19.0312C18.998 19.4978 16.855 20.3394 16.6875 20.4062C16.6808 20.409 16.5313 20.4375 16.5313 20.4375C16.4407 20.4769 16.3564 20.5296 16.2813 20.5938C16.2489 20.6128 16.2176 20.6337 16.1875 20.6562C14.9419 21.0707 14.0031 21.9446 13.4688 23.125C13.3151 23.2354 13.1959 23.3871 13.125 23.5625L9.93751 31.875C9.65335 32.1246 5.27561 35.9749 4.25001 36.8125C2.65676 38.1137 2.69969 40.4656 4.09376 41.7188C4.76547 42.3226 5.65366 42.5839 6.50001 42.4688C7.34637 42.3536 8.12664 41.9328 8.87501 41.3438C9.34568 40.9732 10.6156 39.987 11.8125 39.0312C13.0095 38.0755 14.062 37.2337 14.5 36.8125C15.1742 36.1643 15.6698 35.4499 16 34.8125C16.0422 34.7314 16.4471 33.9571 16.625 33.625V36.875C16.625 36.8491 16.5732 37.0159 16.3438 37.2812C16.1143 37.5466 15.7433 37.8833 15.2813 38.2188C14.3572 38.8897 13.1485 39.5709 12.1563 40.1875C10.9598 40.9309 9.82958 41.5656 8.93751 42.375C8.04545 43.1844 7.37501 44.2873 7.37501 45.625C7.37501 47.1597 8.26361 48.3863 9.37501 49.0625C10.4864 49.7387 11.818 50 13.0625 50H22.4688H22.5313H22.625H34.5938C35.3965 50 37.2152 49.998 38.9375 49.5625C39.7987 49.3448 40.6667 49.0101 41.375 48.4375C42.0834 47.8649 42.625 46.9622 42.625 45.9062C42.625 44.6935 42.0744 43.6723 41.3438 42.9062C40.6132 42.1402 39.7126 41.5579 38.7813 40.9375C37.0036 39.7524 35.5449 38.8311 34.5938 38.0938C34.1182 37.7251 33.7817 37.3931 33.5938 37.1562C33.4058 36.9194 33.375 36.8308 33.375 36.8125V33.6562C33.5484 33.98 33.9591 34.7336 34 34.8125C34.3303 35.4499 34.8258 36.1643 35.5 36.8125C35.938 37.2337 36.9906 38.0755 38.1875 39.0312C39.3845 39.987 40.6231 40.9732 41.0938 41.3438C41.8419 41.9321 42.6539 42.3534 43.5 42.4688C44.3461 42.5841 45.2341 42.3223 45.9063 41.7188C47.3015 40.4658 47.3443 38.1134 45.75 36.8125C44.7246 35.9758 40.3467 32.1246 40.0625 31.875L36.875 23.5625C36.8041 23.3871 36.6849 23.2354 36.5313 23.125C35.938 21.8173 34.8406 20.8318 33.4063 20.5L33.4375 20.4375C32.9157 20.2369 30.7918 19.4683 28.25 19.0312C29.898 17.9592 31 16.1031 31 14C31 10.6981 28.3019 8 25 8ZM25 10C27.221 10 29 11.779 29 14C29 16.221 27.221 18 25 18C22.779 18 21 16.221 21 14C21 11.779 22.779 10 25 10ZM25 20.7188C28.2942 20.7188 32.0866 22.0694 32.7188 22.3125C32.769 22.3377 32.8213 22.3586 32.875 22.375C33.8577 22.5609 34.6475 23.2682 34.9375 24.2188C34.9621 24.2844 34.9935 24.3472 35.0313 24.4062L35.0625 24.5C35.0824 24.5217 35.1033 24.5426 35.125 24.5625L38.2813 32.8438C38.344 32.9893 38.4404 33.1178 38.5625 33.2188C38.5625 33.2188 43.2454 37.3768 44.4688 38.375C45.1564 38.9361 45.0805 39.8129 44.5938 40.25C44.3249 40.4914 44.1036 40.5169 43.75 40.4688C43.3964 40.4206 42.9016 40.2199 42.3438 39.7812C41.8744 39.4118 40.6276 38.419 39.4375 37.4688C38.2475 36.5185 37.009 35.5038 36.875 35.375C36.4052 34.9232 36.023 34.3416 35.7813 33.875C35.5476 33.4241 34.1161 30.7946 33.25 29.1875C33.1433 28.9947 32.9759 28.8425 32.7738 28.7546C32.5717 28.6668 32.3462 28.6481 32.1324 28.7016C31.9186 28.755 31.7285 28.8776 31.5915 29.0502C31.4545 29.2229 31.3784 29.4359 31.375 29.6562V36.8125C31.375 37.4327 31.6764 37.9589 32.0313 38.4062C32.3862 38.8536 32.8323 39.2356 33.375 39.6562C34.4604 40.4976 35.8999 41.4229 37.6563 42.5938C38.588 43.2144 39.4071 43.7578 39.9063 44.2812C40.4054 44.8047 40.625 45.234 40.625 45.9062C40.625 46.3648 40.484 46.6161 40.125 46.9062C39.766 47.1964 39.1625 47.4496 38.4688 47.625C37.0813 47.9758 35.372 48 34.5938 48H22.6875H22.5313H22.4688C22.0822 48 20.8493 47.8692 19.9063 47.5C19.4347 47.3154 19.0208 47.052 18.7813 46.8125C18.5418 46.573 18.4688 46.3987 18.4688 46.0938C18.4688 45.7774 18.5253 45.6087 18.6875 45.4062C18.8497 45.2038 19.1584 44.987 19.5938 44.7812C20.4645 44.3697 21.8555 44.058 23.4688 43.7812C27.6007 43.0725 30.5313 42.5938 30.5313 42.5938C30.6692 42.5834 30.8034 42.5446 30.9255 42.4797C31.0476 42.4148 31.155 42.3254 31.2408 42.2169C31.3266 42.1084 31.3889 41.9834 31.4239 41.8496C31.4589 41.7158 31.4658 41.5762 31.4441 41.4397C31.4225 41.3031 31.3727 41.1725 31.298 41.0561C31.2233 40.9398 31.1253 40.8402 31.0101 40.7636C30.8949 40.6871 30.7652 40.6352 30.629 40.6114C30.4928 40.5875 30.3531 40.5921 30.2188 40.625C30.2188 40.625 27.271 41.1013 23.125 41.8125C21.4683 42.0967 19.9495 42.3871 18.7188 42.9688C18.1034 43.2596 17.5465 43.6301 17.125 44.1562C16.7035 44.6824 16.4688 45.3671 16.4688 46.0938C16.4688 46.8459 16.7932 47.492 17.2188 48H13.0625C12.124 48 11.1214 47.7598 10.4375 47.3438C9.75367 46.9277 9.37501 46.4553 9.37501 45.625C9.37501 44.8897 9.63208 44.4641 10.2813 43.875C10.9304 43.2859 11.9649 42.6659 13.1875 41.9062C14.1232 41.3248 15.4053 40.6158 16.4688 39.8438C17.0005 39.4577 17.4797 39.0508 17.875 38.5938C18.2703 38.1367 18.625 37.5839 18.625 36.875V29.6562C18.6362 29.4246 18.5664 29.1962 18.4278 29.0103C18.2891 28.8244 18.0901 28.6924 17.8649 28.637C17.6396 28.5817 17.4022 28.6063 17.1931 28.7067C16.984 28.8071 16.8163 28.9771 16.7188 29.1875C15.8526 30.7948 14.4499 33.4301 14.2188 33.875C13.977 34.3416 13.5636 34.9232 13.0938 35.375C12.9598 35.5038 11.7526 36.5185 10.5625 37.4688C9.37247 38.419 8.12559 39.4118 7.65626 39.7812C7.09863 40.2202 6.60366 40.4206 6.25001 40.4688C5.89637 40.5169 5.67455 40.4912 5.40626 40.25C4.92033 39.8132 4.81326 38.9358 5.50001 38.375C6.72119 37.3777 11.4375 33.2188 11.4375 33.2188C11.5596 33.1178 11.656 32.9893 11.7188 32.8438L14.9063 24.5C14.9169 24.4898 14.9273 24.4794 14.9375 24.4688C14.9907 24.3917 15.0328 24.3075 15.0625 24.2188C15.3514 23.2742 16.1231 22.5671 17.0938 22.375C17.1934 22.3481 17.2883 22.3059 17.375 22.25C17.4068 22.2411 17.438 22.2307 17.4688 22.2188C17.7973 22.0938 21.5153 20.7188 25 20.7188Z"
+                  fill="white" />
+              </svg>
+            </div>
+            <header>
+              <div class="mx-auto px-4 py-4 sm:px-2 lg:px-2">
+                <h1 class="text-2xl font-bold leading-tight tracking-tight text-white">Rare Disease Guru</h1>
+              </div>
+            </header>
+          </div>
+
+          <div class="-mr-2 flex items-center sm:hidden">
+            <!-- Mobile menu button -->
+            <button type="button"
+              class="relative inline-flex items-center justify-center rounded-md bg-white p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              aria-controls="mobile-menu" aria-expanded="false">
+              <span class="absolute -inset-0.5"></span>
+              <span class="sr-only">Open main menu</span>
+              <!-- Menu open: "hidden", Menu closed: "block" -->
+              <svg class="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+              <!-- Menu open: "block", Menu closed: "hidden" -->
+              <svg class="hidden h-6 w-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </nav>
+
+    <div class="py-10">
+      <main>
+        <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+          <!-- Your content -->
+
+          <div class="mx-auto px-4 py-4 sm:px-2 lg:px-2">
+            <h1 class="text-center text-2xl mb-8 font-bold leading-tight tracking-tight text-black">Search for Rare
+              Diseases</h1>
+          </div>
+
+          <div class="mx-auto max-w-3xl">
+
+            <div class="flex items-start space-x-4">
+              <div class="min-w-0 flex-1">
+                <form id="promptForm" action="#" class="relative">
+                  <div
+                    class="overflow-hidden rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-indigo-600">
+                    <label for="prompt" class="sr-only">??</label>
+                    <textarea rows="3" name="prompt" id="query-input"
+                      class="block w-full resize-none border-0 bg-transparent py-1.5 text-gray-600 placeholder:text-gray-400 focus:outline-none sm:text-xl sm:leading-6 p-6"
+                      placeholder="What genes are related to EDS?"></textarea>
+
+                    <!-- Spacer element to match the height of the toolbar -->
+                    <div class="py-2" aria-hidden="true">
+                      <!-- Matches height of button in toolbar (1px border + 36px content height) -->
+                      <div class="py-px">
+                        <div class="h-9"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="absolute inset-x-0 bottom-0 flex justify-between py-2 pl-3 pr-2">
+                    <div class="flex items-center space-x-5">
+                      <div class="flex items-center">
+                        <button type="button"
+                          class="-m-2.5 flex h-10 w-10 items-center justify-center rounded-full text-gray-400 hover:text-gray-500">
+                          <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd"
+                              d="M15.621 4.379a3 3 0 00-4.242 0l-7 7a3 3 0 004.241 4.243h.001l.497-.5a.75.75 0 011.064 1.057l-.498.501-.002.002a4.5 4.5 0 01-6.364-6.364l7-7a4.5 4.5 0 016.368 6.36l-3.455 3.553A2.625 2.625 0 119.52 9.52l3.45-3.451a.75.75 0 111.061 1.06l-3.45 3.451a1.125 1.125 0 001.587 1.595l3.454-3.553a3 3 0 000-4.242z"
+                              clip-rule="evenodd" />
+                          </svg>
+                          <span class="sr-only">Attach a file</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="flex-shrink-0">
+                      <button id="btn-prompt-parse" type="submit"
+                        class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed">Post</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <div id="query-loading" class="spinner-container flex items-center place-content-center hidden"
+              style="height: 150px">
+              <div class="spinner" style="margin: 0; padding: 0; height: 60px; width: 60px"></div>
+            </div>
+
+            <div class="m-20 relative">
+              <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                <div class="w-full border-t border-gray-300"></div>
+              </div>
+              <div class="relative flex justify-center">
+                <span class="bg-white px-3 text-base font-semibold leading-6 text-gray-400">Response</span>
+              </div>
+            </div>
+
+            <div
+              class="overflow-hidden rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-indigo-600">
+              <label for="prompt" class="sr-only">??</label>
+              <textarea rows="3" id="response-text"
+                class="block w-full resize-none border-0 bg-transparent py-1.5 text-gray-600 placeholder:text-gray-400 focus:outline-none sm:text-xl sm:leading-6 p-6"></textarea>
+            </div>
+            <!-- <div
+              class="overflow-hidden rounded-lg shadow-sm ring-1 ring-inset ring-gray-300 focus-within:ring-2 focus-within:ring-indigo-600"> -->
+            <!-- <textarea name="prompt" id="response-text"
+              class="block w-full resize-none border-0 bg-transparent py-1.5 text-gray-600 placeholder:text-gray-400 focus:outline-none sm:text-xl sm:leading-6 p-6"
+              placeholder=""></textarea> -->
+            <!-- Matches height of button in toolbar (1px border + 36px content height) -->
+            <div class="py-px">
+              <div class="h-9"></div>
+            </div>
+            <!-- </div> -->
+          </div>
+        </div>
+
+    </div>
+    </main>
+  </div>
+  </div>
+  <!-- translator -->
+
+
+  <!-- footer -->
+
+  <!-- <footer class="footer" >
+    </footer> -->
+  {% if include_sentry_js %}
+  <script src="https://js.sentry-cdn.com/4226949e3a1d4812b5c26d55888d470d.min.js" crossorigin="anonymous"></script>
+  {% endif %}
+  <script src="{{ url_for('static', filename='hackathon.js') }}"></script>
+  <!-- <script src="{{ url_for('static', filename='save2neo.js') }}"></script> -->
+</body>
+
+</html>

@@ -10,6 +10,7 @@ from quart import Quart, request, jsonify, render_template, make_response
 import aws
 import batch
 import gpt
+import llama
 import parse
 import save
 import search
@@ -55,16 +56,47 @@ def _wrong_payload_response(message="wrong payload"):
 
 
 async def _render_template(template, **kwargs):
+    nav_links = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Batch Processing', 'url': '/batch'},
+        {'name': 'Query', 'url': '/query'},
+    ]
+    if app.config.get('PAPERS_DIR'):
+        nav_links.append({'name': 'Search', 'url': '/search'})
+    kwargs['nav_links'] = nav_links
+    kwargs['active_page'] = request.path
+
     # Only include the Sentry reporting JS if server is configured to report backend errors
     kwargs['include_sentry_js'] = not not SENTRY_DSN
-    # Only show the search page if the PAPERS_DIR is configured
-    kwargs['show_search_page'] = not not app.config.get('PAPERS_DIR')
+
     return await render_template(template, **kwargs)
 
 
 @app.route('/')
 async def home():
     return await _render_template("index.html")
+
+
+@app.route('/hackathon')
+async def hackathon():
+    return await _render_template("hackathon.html")
+
+
+@app.route('/ask-llama', methods=["POST"])
+async def ask_llama():
+    post = await request.get_json()
+    log_msg('POST request to /ask-llama endpoint')
+    _log_args(post)
+
+    required_args = ['query']
+    if post is None or not all(arg in post for arg in required_args):
+        return jsonify(_wrong_payload_response()), 400
+
+    query = post.get('query')
+    return await utils.make_response_with_heartbeat(
+        llama.aask_llama(query),
+        log_label='Llama query'
+    )
 
 
 @app.route('/extractor')

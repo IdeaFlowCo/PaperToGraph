@@ -1,126 +1,86 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MD6L3WYG0S"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
+{% block content %}
+<div class="container container-center">
+    <header class="hero">
+        <!-- <img class="hero-img" style="padding:0 0px 30px 0px;width:auto; height:281px"  src="{{ url_for('static', filename='giraffe_cropped.png') }}" /> -->
+        <!-- <img class="hero-img" style="padding:0 0px 0 0px;width:230px"  src="{{ url_for('static', filename='giraffe_cropped.png') }}" /> -->
+        <!-- <h1 class="hero-heading">NVC <span class="heading-inverted"> Translator</span></h1> -->
+    </header>
 
-        gtag('config', 'G-MD6L3WYG0S');
-    </script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paper2Graph</title>
-    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css" />
-    <script src="https://kit.fontawesome.com/1a48924413.js" crossorigin="anonymous"></script>
-</head>
-
-<body>
-    <!-- nav -->
-
-    <nav class="navigation container">
-        <div class="nav-brand">
-            Paper2Graph
-        </div>
-        <div class="spacer"></div>
-        <span class="link link-active">Translator</span>
-        <a class="link" href="/batch">Batch Processing</a>
-        <a class="link" href="/query">Query</a>
-        {% if show_search_page %}<a class="link" href="/search">Search</a>{% endif %}
-    </nav>
-
-    <!-- translator -->
-
-    <div class="container container-center">
-        <header class="hero">
-            <!-- <img class="hero-img" style="padding:0 0px 30px 0px;width:auto; height:281px"  src="{{ url_for('static', filename='giraffe_cropped.png') }}" /> -->
-            <!-- <img class="hero-img" style="padding:0 0px 0 0px;width:230px"  src="{{ url_for('static', filename='giraffe_cropped.png') }}" /> -->
-            <!-- <h1 class="hero-heading">NVC <span class="heading-inverted"> Translator</span></h1> -->
-        </header>
-
-        <div class="">
-            <textarea id="input-translate" placeholder="Enter text you want to convert to Ideaflow notes">
-                Trifluoperazine (tfp) might be an interesting candidate for treating Wilms' Tumor because tfp it antagonizes CALM1 (a protein target). CALM1 regulates an inflammatory gene, IL-6. Lastly we know that IL-6 is associated with Wilms' Tumor.
-            </textarea>
-            <section id="text-info">
-                <span class="info-label" id="text-length">Text length</span>
-                <span class="info-label" id="word-count">Word count</span>
-            </section>
-        </div>
-
-        <div class="model-selection">
-            <label>
-                <input type="radio" id="model1" name="model-select" value="gpt-3.5-turbo" checked>
-                GPT 3.5
-            </label>
-
-            <label>
-                <input type="radio" id="model3" name="model-select" value="gpt-3.5-turbo-16k">
-                GPT 3.5: 16k context
-            </label>
-
-            <label>
-                <input type="radio" id="model2" name="model-select" value="gpt-4">
-                GPT 4
-            </label>
-
-            <label>
-                <input type="radio" id="model4" name="model-select" value="gpt-4-32k">
-                GPT 4: 32k context
-            </label>
-        </div>
-
-        <div class="override-check">
-            <input type="checkbox" id="override-prompt">
-            <label for="override-prompt">Send custom prompt to GPT</label>
-        </div>
-        <div id="override-prompt-container" class="override-input" style="display: none;">
-            <span class="label">Prompt to send to GPT</span>
-            <textarea id="prompt-override-text"></textarea>
-        </div>
-
-        <div class="spinner-container">
-            <button class="link link-primary" id="btn-raw-parse">Translate</button>
-            <div id="translate-loading" class="spinner" style="display: none;"></div>
-        </div>
-
-        <div id="translate-error" class="error-msg" style="display: none;">
-            Error encountered while trying to extract information. Please try again in a few seconds.
-        </div>
-
-        <textarea style="font-family: Arial; text-align: left;" id="output-translate" contenteditable="true"
-            placeholder="Output of the translation">
+    <div class="">
+        <textarea id="input-translate" placeholder="Enter text you want to convert to Ideaflow notes">
+            Trifluoperazine (tfp) might be an interesting candidate for treating Wilms' Tumor because tfp it antagonizes CALM1 (a protein target). CALM1 regulates an inflammatory gene, IL-6. Lastly we know that IL-6 is associated with Wilms' Tumor.
         </textarea>
-
-        <div class="spinner-container">
-            <button class="link link-primary" id="btn-save-to-neo">Save to Neo4j</button>
-            <div id="save-loading" class="spinner" style="display: none;"></div>
-        </div>
-
-        <div id="save-input-error" class="error-msg" style="display: none;">
-            The data you want to save to Neo4j is not formatted as proper JSON. Please correct before trying again.
-        </div>
-        <div id="save-error" class="error-msg" style="display: none;">
-            Error encountered while trying to save data. Please try again in a few seconds.
-        </div>
-        <div id="save-success" class="success-msg" style="display: none;">
-            Data saved successfully.
-        </div>
-
+        <section id="text-info">
+            <span class="info-label" id="text-length">Text length</span>
+            <span class="info-label" id="word-count">Word count</span>
+        </section>
     </div>
 
-    <!-- footer -->
+    <div class="model-selection">
+        <label>
+            <input type="radio" id="model1" name="model-select" value="gpt-3.5-turbo" checked>
+            GPT 3.5
+        </label>
 
-    <!-- <footer class="footer" >
-    </footer> -->
-    {% if include_sentry_js %}
-    <script src="https://js.sentry-cdn.com/4226949e3a1d4812b5c26d55888d470d.min.js" crossorigin="anonymous"></script>
-    {% endif %}
-    <script src="{{ url_for('static', filename='translate.js') }}"></script>
-    <script src="{{ url_for('static', filename='save2neo.js') }}"></script>
-</body>
+        <label>
+            <input type="radio" id="model3" name="model-select" value="gpt-3.5-turbo-16k">
+            GPT 3.5: 16k context
+        </label>
 
-</html>
+        <label>
+            <input type="radio" id="model2" name="model-select" value="gpt-4">
+            GPT 4
+        </label>
+
+        <label>
+            <input type="radio" id="model4" name="model-select" value="gpt-4-32k">
+            GPT 4: 32k context
+        </label>
+    </div>
+
+    <div class="override-check">
+        <input type="checkbox" id="override-prompt">
+        <label for="override-prompt">Send custom prompt to GPT</label>
+    </div>
+    <div id="override-prompt-container" class="override-input" style="display: none;">
+        <span class="label">Prompt to send to GPT</span>
+        <textarea id="prompt-override-text"></textarea>
+    </div>
+
+    <div class="spinner-container">
+        <button class="link link-primary" id="btn-raw-parse">Translate</button>
+        <div id="translate-loading" class="spinner" style="display: none;"></div>
+    </div>
+
+    <div id="translate-error" class="error-msg" style="display: none;">
+        Error encountered while trying to extract information. Please try again in a few seconds.
+    </div>
+
+    <textarea style="font-family: Arial; text-align: left;" id="output-translate" contenteditable="true"
+        placeholder="Output of the translation">
+    </textarea>
+
+    <div class="spinner-container">
+        <button class="link link-primary" id="btn-save-to-neo">Save to Neo4j</button>
+        <div id="save-loading" class="spinner" style="display: none;"></div>
+    </div>
+
+    <div id="save-input-error" class="error-msg" style="display: none;">
+        The data you want to save to Neo4j is not formatted as proper JSON. Please correct before trying again.
+    </div>
+    <div id="save-error" class="error-msg" style="display: none;">
+        Error encountered while trying to save data. Please try again in a few seconds.
+    </div>
+    <div id="save-success" class="success-msg" style="display: none;">
+        Data saved successfully.
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='translate.js') }}"></script>
+<script src="{{ url_for('static', filename='save2neo.js') }}"></script>
+{% endblock %}

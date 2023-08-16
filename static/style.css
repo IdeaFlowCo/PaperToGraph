@@ -98,45 +98,6 @@ textarea {
     text-align: center;
 }
 
-/* navbar */
-
-.navigation {
-    display: flex;
-    flex-direction: row;
-    border: 1px solid var(--navbar-color);
-    background-color: var(--navbar-color);
-    border-top-right-radius: 1rem;
-    border-bottom-left-radius: 1rem;
-    padding: 1rem;
-    margin: 1rem 1rem;
-}
-
-.navigation .nav-brand {
-    font-weight: bolder;
-    color: white;
-    font-size: 1.2em;
-}
-
-.navigation .spacer {
-    flex-grow: 1;
-}
-
-.navigation .link {
-    color: white;
-    text-align: right;
-}
-
-.navigation .link+.link {
-    margin-left: 2ch;
-}
-
-.navigation .nav-pills {
-    text-align: right;
-}
-
-.navigation .link-active {
-    font-weight: bolder;
-}
 
 /* lists */
 

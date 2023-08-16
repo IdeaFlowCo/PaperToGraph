@@ -7,6 +7,7 @@
 
     // const translate = document.querySelector("#btn-translate");
     const rawParseButton = document.querySelector("#btn-raw-parse");
+
     const translateSpinner = document.querySelector("#translate-loading");
 
     const translateErrorMsg = document.querySelector('#translate-error');
@@ -80,7 +81,9 @@
             console.error(e);
         }
     }
-    rawParseButton.addEventListener("click", handleRawParseClick);
+    if (rawParseButton) {
+        rawParseButton.addEventListener("click", handleRawParseClick);
+    }
 
 
     function humanByteSize(numBytes) {
@@ -133,11 +136,15 @@
     };
 
     document.addEventListener('DOMContentLoaded', function () {
-        overridePromptCheckbox.addEventListener('change', handlePromptOverrideCheck);
-        translateInput.value = translateInput.value.trim();
-        calcInputTextLength();
-        calcInputWordCount();
-        translateInput.addEventListener('change', calcInputTextLength);
-        translateInput.addEventListener('change', calcInputWordCount);
+        if (overridePromptCheckbox) {
+            overridePromptCheckbox.addEventListener('change', handlePromptOverrideCheck);
+        }
+        if (translateInput) {
+            translateInput.value = translateInput.value.trim();
+            calcInputTextLength();
+            calcInputWordCount();
+            translateInput.addEventListener('change', calcInputTextLength);
+            translateInput.addEventListener('change', calcInputWordCount);
+        }
     });
 })();

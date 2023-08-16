@@ -146,7 +146,7 @@ def parse_args(args):
         help='Mirror logs to a file in addition to stdout'
     )
     parser.add_argument(
-        '--gpt-model',
+        '--gpt_model',
         default='gpt-3.5-turbo',
         help='Name of the GPT model to use'
     )

@@ -1,76 +1,41 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-MD6L3WYG0S"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date());
+{% block content %}
+<div id="search-controls" class="utils-container">
+    <h2 class="title">Query</h2>
 
-        gtag('config', 'G-MD6L3WYG0S');
-    </script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paper2Graph batch processing</title>
-    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" type="text/css" />
-    <script src="https://kit.fontawesome.com/1a48924413.js" crossorigin="anonymous"></script>
-</head>
-
-<body>
-    <!-- nav -->
-
-    <nav class="navigation container">
-        <div class="nav-brand">
-            Paper2Graph
-        </div>
-        <div class="spacer"></div>
-        <a class="link" href="/">Translator</a>
-        <a class="link" href="/batch">Batch Processing</a>
-        <span class="link link-active">Query</span>
-        {% if show_search_page %}<a class="link" href="/search">Search</a>{% endif %}
-    </nav>
-
-    <!-- content -->
-
-    <div id="search-controls" class="utils-container">
-        <h2 class="title">Query</h2>
-
-        <span class="label">Query</span>
-        <div class="row-container">
-            <input id="query-input" class="text-input" />
-            <button class="link link-primary" id="btn-search">Search</button>
-        </div>
+    <span class="label">Query</span>
+    <div class="row-container">
+        <input id="query-input" class="text-input" />
+        <button class="link link-primary" id="btn-search">Search</button>
     </div>
+</div>
 
-    <div id="search-loading-spinner" class="container container-center hidden">
-        <div class="spinner-container">
-            <div class="spinner"></div>
-        </div>
+<div id="search-loading-spinner" class="container container-center hidden">
+    <div class="spinner-container">
+        <div class="spinner"></div>
     </div>
+</div>
 
-    <div id="generic-error-msg" class="error-msg hidden">
-        Error encountered during query. Please try again.
+<div id="generic-error-msg" class="error-msg hidden">
+    Error encountered during query. Please try again.
+</div>
+
+<div id="search-output-container" class="utils-container">
+    <span class="label">Textual answer to the question</span>
+    <div id="answer-output">
     </div>
-
-    <div id="search-output-container" class="utils-container">
-        <span class="label">Textual answer to the question</span>
-        <div id="answer-output">
-        </div>
-        <span class="label">References</span>
-        <div id="references-output">
-        </div>
-        <span class="label">Sources</span>
-        <div id="sources-output">
-            [None]
-        </div>
+    <span class="label">References</span>
+    <div id="references-output">
     </div>
+    <span class="label">Sources</span>
+    <div id="sources-output">
+        [None]
+    </div>
+</div>
 
-    {% if include_sentry_js %}
-    <script src="https://js.sentry-cdn.com/4226949e3a1d4812b5c26d55888d470d.min.js" crossorigin="anonymous"></script>
-    {% endif %}
-    <script src="{{ url_for('static', filename='query.js') }}"></script>
-</body>
+{% endblock %}
 
-</html>
+{% block scripts %}
+<script src="{{ url_for('static', filename='query.js') }}"></script>
+{% endblock %}

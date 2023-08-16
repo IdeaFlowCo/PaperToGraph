@@ -1,0 +1,19 @@
+<nav class="navigation container">
+    <div class="nav-brand">
+        Paper2Graph
+    </div>
+    <input id="navbar__toggle" type="checkbox" />
+    <label class="navbar-toggler" for="navbar__toggle">
+        <span></span>
+    </label>
+
+    <div id="navbarLinks" class="navbar-links collapsed">
+        {% for link in nav_links %}
+        {% if link.url == active_page %}
+        <span class="link link-active">{{ link.name }}</span>
+        {% else %}
+        <a class="link" href="{{ link.url }}">{{ link.name }}</a>
+        {% endif %}
+        {% endfor %}
+    </div>
+</nav>

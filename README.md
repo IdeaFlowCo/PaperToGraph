@@ -21,8 +21,8 @@ export AWS_SECRET_ACCESS_KEY=`aws configure get default.aws_secret_access_key`
 ```
 
 To run the app with the Quart dev server (instead of routing through a separate `hypercorn` instance),
-set the `P2G_DEV_SERVER` environment variable:
-`P2G_DEV_SERVER=True python3 app.py`
+set the `DEV_SERVER` environment variable:
+`DEV_SERVER=True python3 app.py`
 
 **Virtual environment**:
 
