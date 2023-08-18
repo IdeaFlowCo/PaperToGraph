@@ -2,12 +2,9 @@
 All GPT-specific code used for parsing entities and relationships out of text.
 '''
 
-import os
 import time
 
 import openai
-
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
 from utils import log_msg
 

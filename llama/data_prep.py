@@ -2,20 +2,7 @@ import json
 
 import boto3
 
-endpoint_name = 'jumpstart-ftc-meta-textgeneration-llama-2-7b'
-
-
-def query_endpoint(payload):
-    client = boto3.client("sagemaker-runtime", region_name="us-east-1")
-    response = client.invoke_endpoint(
-        EndpointName=endpoint_name,
-        ContentType="application/json",
-        Body=json.dumps(payload),
-        CustomAttributes="accept_eula=true",
-    )
-    response = response["Body"].read().decode("utf8")
-    response = json.loads(response)
-    return response
+from .common import fetch_response
 
 
 DATA_PREP_SM_TEMPLATE = (
@@ -87,7 +74,7 @@ def test_run():
             "inputs": [dialog],
             "parameters": {"max_new_tokens": 1024, "top_p": 0.9, "temperature": 0.3}
         }
-        result = query_endpoint(payload)[0]
+        result = fetch_response(payload)[0]
         for msg in dialog:
             print(f"{msg['role'].capitalize()}: {msg['content']}\n")
         print(f"> {result['generation']['role'].capitalize()}: {result['generation']['content']}")
@@ -122,30 +109,10 @@ def test_data_prep():
         "inputs": [dialog],
         "parameters": {"max_new_tokens": 256, "top_p": 0.9, "temperature": 0.6}
     }
-    result = query_endpoint(payload)
+    result = fetch_response(payload)
     print(result)
     result = result[0]
     print(result['generation']['content'])
-
-
-import json
-
-import boto3
-
-endpoint_name = 'jumpstart-ftc-meta-textgeneration-llama-2-7b'
-
-
-def query_endpoint(payload):
-    client = boto3.client("sagemaker-runtime", region_name="us-east-1")
-    response = client.invoke_endpoint(
-        EndpointName=endpoint_name,
-        ContentType="application/json",
-        Body=json.dumps(payload),
-        CustomAttributes="accept_eula=true",
-    )
-    response = response["Body"].read().decode("utf8")
-    response = json.loads(response)
-    return response
 
 
 def main():
@@ -168,7 +135,7 @@ def main():
         },
     ]
     for payload in payloads:
-        query_response = query_endpoint(payload)
+        query_response = fetch_response(payload)
         print(payload["inputs"])
         response = query_response[0]['generation']  # .split('\n')[1]
         print(f"> {response}")

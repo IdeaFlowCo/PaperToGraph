@@ -324,6 +324,11 @@ async def server_setup():
 
 
 @app.before_serving
+async def openai_setup():
+    gpt.init_module(app.config)
+
+
+@app.before_serving
 async def batch_job_setup():
     batch.setup_status_file()
 

@@ -5,12 +5,9 @@ Shared code for interacting with OpenAI APIs.
 import asyncio
 import json
 import math
-import os
 import random
 
 import openai
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
 import tiktoken
 
 import utils
@@ -19,6 +16,11 @@ from utils import log_msg, log_debug
 
 VALID_GPT_MODELS = ['gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-32k']
 DEFAULT_GPT_MODEL = 'gpt-3.5-turbo'
+
+
+def init_module(config):
+    openai.api_key = config.get('OPENAI_API_KEY', None)
+    log_msg(f'Using OpenAI API key: {utils.secret_to_log_str(openai.api_key)}')
 
 
 def sanitize_gpt_model_choice(model):

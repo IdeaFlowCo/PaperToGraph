@@ -64,7 +64,7 @@ python run_script.py enrich_entity_types
 If you want to run the same script while specifying that the `gpt-3.5-turbo-16k` model should be used for the run, you can do
 
 ```
-python run_script.py enrich_entity_types --gpt-model=gpt-3.5-turbo-16k
+python run_script.py enrich_entity_types --gpt_model=gpt-3.5-turbo-16k
 ```
 
 Table of scripts currently available and what they do:

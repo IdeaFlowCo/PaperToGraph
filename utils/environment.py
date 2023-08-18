@@ -59,18 +59,34 @@ def add_neo_credential_override_args(parser):
     parser.add_argument(
         '--neo_uri',
         default=None,
-        help="The URI for the Neo4j instance to save loaded data to.")
+        help='The URI for the Neo4j instance to save loaded data to.'
+    )
     parser.add_argument(
         '--neo_user',
         default=None,
-        help='The username to use when connecting to the Neo4j database')
+        help='The username to use when connecting to the Neo4j database'
+    )
     parser.add_argument(
         '--neo_pass',
         default=None,
-        help='The password to use when connecting to the Neo4j database')
+        help='The password to use when connecting to the Neo4j database'
+    )
 
 
-def _secret_to_log_str(secret):
+def add_logger_args(parser):
+    parser.add_argument(
+        '--log_file',
+        default=None,
+        help='Mirror logs to a file in addition to stdout'
+    )
+    parser.add_argument(
+        '--log_level',
+        default='INFO',
+        help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)'
+    )
+
+
+def secret_to_log_str(secret):
     return f'{secret[:3]}...{secret[-3:]}'
 
 
@@ -79,19 +95,19 @@ def log_config_vars(config):
 
     aws_config = config['aws'].copy()
     if 'aws_secret_access_key' in aws_config and aws_config['aws_secret_access_key']:
-        aws_config['aws_secret_access_key'] = _secret_to_log_str(aws_config['aws_secret_access_key'])
+        aws_config['aws_secret_access_key'] = secret_to_log_str(aws_config['aws_secret_access_key'])
     if 'aws_session_token' in aws_config and aws_config['aws_session_token']:
-        aws_config['aws_session_token'] = _secret_to_log_str(aws_config['aws_session_token'])
+        aws_config['aws_session_token'] = secret_to_log_str(aws_config['aws_session_token'])
 
     neo_config = config['neo4j'].copy()
     if 'password' in neo_config and neo_config['password']:
-        neo_config['password'] = _secret_to_log_str(neo_config['password'])
+        neo_config['password'] = secret_to_log_str(neo_config['password'])
 
     es_config = config['elastic'].copy()
     if 'basic_auth' in es_config and es_config['basic_auth']:
         es_config['basic_auth'] = (
             es_config['basic_auth'][0],
-            _secret_to_log_str(es_config['basic_auth'][1])
+            secret_to_log_str(es_config['basic_auth'][1])
         )
 
     configs_to_log = {

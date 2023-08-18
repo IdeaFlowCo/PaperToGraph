@@ -5,12 +5,11 @@ import multiprocessing
 import os
 import queue
 import signal
-import sys
 import threading
 import xml.etree.ElementTree as ET
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import gpt
+import utils
 
 
 def _prep_output_file(out_file):
@@ -219,6 +218,8 @@ def main(args):
 
     files = _find_files_to_process(args.file_paths)
 
+    # gpt.init_module(config)
+
     worker_processes = []
     files_per_worker = len(files) // args.num_workers
     file_segments = [files[i:i + files_per_worker]
@@ -288,16 +289,6 @@ def parse_args(args):
         help="Only extract text from the XML files, don't process with GPT"
     )
     parser.add_argument(
-        '--log_file',
-        default=None,
-        help='Mirror logs to a file in addition to stdout'
-    )
-    parser.add_argument(
-        '--log_level',
-        default='INFO',
-        help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)'
-    )
-    parser.add_argument(
         '--file_paths',
         nargs='+',
         help='File paths to extract metadata from'
@@ -312,6 +303,7 @@ def parse_args(args):
         default=1,
         help='Number of worker processes to use for processing.'
     )
+    utils.add_logger_args(parser)
 
     return parser.parse_args(args)
 

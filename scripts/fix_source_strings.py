@@ -161,16 +161,7 @@ def parse_args(args):
         default=None,
         help='Path to canonical sources'
     )
-    parser.add_argument(
-        '--log_file',
-        default=None,
-        help='Mirror logs to a file in addition to stdout'
-    )
-    parser.add_argument(
-        '--log_level',
-        default='INFO',
-        help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)'
-    )
+    utils.add_logger_args(parser)
     utils.add_neo_credential_override_args(parser)
 
     return parser.parse_args(args)

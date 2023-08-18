@@ -2,12 +2,7 @@
 Code for tagging entity types with OpenAI.
 '''
 
-import os
 import time
-
-import openai
-
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
 from utils import log_msg
 

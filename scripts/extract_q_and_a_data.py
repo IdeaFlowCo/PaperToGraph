@@ -4,6 +4,8 @@ import json
 import logging
 import os
 
+import utils
+
 
 def _prep_output_file(out_file):
     # Make intermediate directories if necessary
@@ -92,16 +94,7 @@ def parse_args(args):
         '--output_file',
         help='Where to write a CSV file of extracted metadata'
     )
-    parser.add_argument(
-        '--log_file',
-        default=None,
-        help='Mirror logs to a file in addition to stdout'
-    )
-    parser.add_argument(
-        '--log_level',
-        default='INFO',
-        help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)'
-    )
+    utils.add_logger_args(parser)
 
     return parser.parse_args(args)
 

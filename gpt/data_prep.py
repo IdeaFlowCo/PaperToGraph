@@ -4,12 +4,7 @@ Code for transforming text into a Q&A format that can be used to train LLMs.
 
 import asyncio
 import json
-import os
 import time
-
-import openai
-
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
 from utils import log_msg, log_debug
 

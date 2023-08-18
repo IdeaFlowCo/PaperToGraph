@@ -109,6 +109,7 @@ async def main(args):
     utils.setup_logger(name=thread_name, **config['logger'])
     log_msg('Logger initialized')
 
+    gpt.init_module(config)
     driver = neo.get_neo4j_driver(config['neo4j'])
 
     try:
@@ -135,17 +136,6 @@ def parse_args(args):
     parser = argparse.ArgumentParser(description='Enrich entity types with GPT')
 
     parser.add_argument(
-        '--debug',
-        action='store_true',
-        default=False,
-        help='Enable debug logging'
-    )
-    parser.add_argument(
-        '--log_file',
-        default=None,
-        help='Mirror logs to a file in addition to stdout'
-    )
-    parser.add_argument(
         '--gpt_model',
         default='gpt-3.5-turbo',
         help='Name of the GPT model to use'
@@ -155,6 +145,7 @@ def parse_args(args):
         default=None,
         help='Specify a log file from a previous run to recover mapped types from instead of using GPT'
     )
+    utils.add_logger_args(parser)
     utils.add_neo_credential_override_args(parser)
 
     return parser.parse_args(args)

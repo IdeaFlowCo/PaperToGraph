@@ -229,16 +229,6 @@ def parse_args(args):
     parser = argparse.ArgumentParser(description='Extract article metadata from XML')
 
     parser.add_argument(
-        '--log_file',
-        default=None,
-        help='Mirror logs to a file in addition to stdout'
-    )
-    parser.add_argument(
-        '--log_level',
-        default='INFO',
-        help='Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)'
-    )
-    parser.add_argument(
         '--file_paths',
         nargs='+',
         help='File paths to extract metadata from'
