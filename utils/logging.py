@@ -58,6 +58,13 @@ def setup_logger(name=None, log_file=None, level=logging.INFO):
     stdout_handler.setFormatter(formatter)
     logger.addHandler(stdout_handler)
 
+    if level == logging.DEBUG:
+        # Quiet down OpenAI logging
+        logging.getLogger('openai').setLevel(logging.INFO)
+
+    # Quiet chatty request logging from elasticsearch library
+    # logging.getLogger('elastic_transport.transport').setLevel(logging.WARNING)
+
     if log_file:
         setup_log_file(log_file)
         file_handler = logging.FileHandler(log_file)

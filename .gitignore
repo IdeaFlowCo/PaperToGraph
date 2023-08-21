@@ -17,5 +17,8 @@ media
 # Editor configs
 /.vscode
 
-# Log files from running batch jobs locally
+# Log files from running batch jobs and scripts locally
 /logs/
+
+# Output files from running scripts locally
+/outputs/
