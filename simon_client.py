@@ -10,7 +10,7 @@ from elasticsearch import Elasticsearch
 
 # Add submodule dir to path to allow imports
 sys.path.append('./simon')
-from simon import AgentContext, Assistant
+from simon import AgentContext, Search
 
 import utils
 from utils import log_msg
@@ -19,9 +19,9 @@ from utils import log_msg
 class SimonClient:
     def __init__(self, config):
         self.config = config
-        self._assistant = self._assistant_from_config(config)
+        self._search_client = self._search_client_from_config(config)
 
-    def _assistant_from_config(self, config):
+    def _search_client_from_config(self, config):
         openai_api_key = config['OPENAI_API_KEY']
         llm = ChatOpenAI(openai_api_key=openai_api_key, model_name="gpt-3.5-turbo", temperature=0)
         reason_llm = ChatOpenAI(openai_api_key=openai_api_key, model_name="gpt-4", temperature=0)
@@ -31,13 +31,12 @@ class SimonClient:
         uid = 'paper2graph'
 
         context = AgentContext(llm, reason_llm, embedding, es, uid)
-        providers = []
-        return Assistant(context, providers, verbose=True)
+        return Search(context)
 
     async def query_simon(self, query):
         log_msg(f'Querying Simon with query: "{query}"')
         a = time.time()
-        result = await asyncio.to_thread(lambda: self._assistant(query))
+        result = await asyncio.to_thread(lambda: self._search_client.query(query))
         b = time.time()
         res_for_logs = json.dumps(result, indent=2)
         log_msg(f'Simon query completed in {(a-b):.2f} seconds. Result:\n{res_for_logs}')

@@ -19,14 +19,14 @@
 
     const answerWithCitationsInline = (parsedResponse) => {
         const answer = parsedResponse.answer;
-        const resourceIds = parsedResponse.resource_ids;
+        const answerResources = parsedResponse.answer_resources;
 
         // Regular expression to match citations in the answer
         const citationRegex = /\[(\d+)\]/g;
 
         // Replace citations in the answer with links to corresponding sources
         const modifiedAnswer = answer.replace(citationRegex, (match, citationNumber) => {
-            const sourceUrl = resourceIds[citationNumber];
+            const sourceUrl = answerResources[citationNumber]?.chunk?.metadata?.source;
             if (sourceUrl) {
                 return `<a href="${sourceUrl}" target="_blank">[${citationNumber}]</a>`;
             }
@@ -65,23 +65,23 @@
 
             let resourcesText = '';
             const citationsBySource = {};
-            for (const [source, references] of Object.entries(parsed.resource_references)) {
-                citationsBySource[source] = { 'title': '', 'citations': [] };
-                for (const [refNum, reference] of Object.entries(references)) {
-                    if (refNum === '_hash') continue;
+            for (const [refNum, refData] of Object.entries(parsed.answer_resources)) {
+                const sourceUrl = refData.chunk.metadata.source;
 
-                    const refLink = document.createElement('a');
-                    refLink.textContent = `[${refNum}]`;
-                    refLink.href = reference.metadata.source;
-                    refLink.target = '_blank';
+                let title = refData.chunk.metadata.title
+                title = title.endsWith('.txt') ? title.slice(0, -4) : title;
 
-                    resourcesText += `${refLink.outerHTML}: ${reference.text}<br>`;
-
-                    let title = reference.metadata.title
-                    title = title.endsWith('.txt') ? title.slice(0, -4) : title;
-                    citationsBySource[source]['title'] = title;
-                    citationsBySource[source]['citations'].push(refNum);
+                if (!(sourceUrl in citationsBySource)) {
+                    citationsBySource[sourceUrl] = { 'title': title, 'citations': [] };
                 }
+                citationsBySource[sourceUrl].citations.push(refNum);
+
+                const refLink = document.createElement('a');
+                refLink.textContent = `[${refNum}]`;
+                refLink.href = sourceUrl;
+                refLink.target = '_blank';
+
+                resourcesText += `${refLink.outerHTML}: ${refData.quote}<br>`;
             }
             referencesOutput.innerHTML = resourcesText;
 
