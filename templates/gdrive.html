@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="search-controls" class="utils-container">
+    <h2 class="title">Ingest files from Google Drive</h2>
+    <!-- <span class="subtitle">{{paper_count}} papers on server</span> -->
+
+    <span class="label">Search by file name (leave blank for all)</span>
+    <input id="search-input" class="text-input" />
+
+    <span class="label">File types to search</span>
+    <div class="type-selection">
+        {% for file_type in file_types %}
+        <label>
+            <input type="radio" name="mime-type-select" value="{{file_type.value}}">
+            {{file_type.label}}
+        </label>
+        {% endfor %}
+        <label>
+            <input type="radio" name="mime-type-select" value="_ALL_" checked>
+            All
+        </label>
+    </div>
+
+    <button class="link link-primary" id="btn-search">Search</button>
+</div>
+
+<div id="search-loading-spinner" class="container container-center hidden">
+    <div class="spinner-container">
+        <div class="spinner"></div>
+    </div>
+</div>
+
+<div id="search-error-msg" class="error-msg hidden">
+    Error encountered during search. Please try again.
+</div>
+
+<div id="search-results-container" class="utils-container">
+    <span id="matching-files-label" class="label">Matching files</span>
+    <div id="search-results-placeholder" class="results-list-placeholder">
+        Search results will appear here.
+    </div>
+    <div id="search-results-empty" class="hidden">
+        No results found.
+    </div>
+    <ul id="search-results-list" class="results-list hidden">
+    </ul>
+    <div id="search-pagination-controls" class="row-container hidden">
+        <ul id="search-results-pagination" class="pagination" style="margin-left: auto">
+            <li id="search-results-prev-page" class="page-item disabled">
+                <a class="page-link" href="#">Previous</a>
+            </li>
+            <li class="page-item"><a class="page-link" href="#">1</a></li>
+            <li class="page-item"><a class="page-link" href="#">2</a></li>
+            <li class="page-item"><a class="page-link" href="#">3</a></li>
+            <li id="search-results-next-page" class="page-item disabled">
+                <a class="page-link" href="#">Next</a>
+            </li>
+        </ul>
+        <ul id="search-results-pagination-jump" class="pagination" style="margin-left: 1ch">
+            <li id="search-results-first-page" class="page-item disabled">
+                <a class="page-link" href="#">First</a>
+            </li>
+            <li id="search-results-last-page" class="page-item disabled">
+                <a class="page-link" href="#">Last</a>
+            </li>
+        </ul>
+    </div>
+    <button class="link link-primary" id="btn-add-to-list" disabled>Append all to "ingest set" list</button>
+</div>
+
+<div id="new-batch-container" class="utils-container">
+    <span class="label">Ingest set</span>
+    <pre id="new-batch-list" contenteditable="true"></pre>
+
+    <div class="row-container">
+        <button class="link link-primary" id="btn-new-batch-set" disabled>Create new batch input set</button>
+        <button class="link link-primary" id="btn-ingest-to-simon" disabled>Ingest into Simon</button>
+        <button class="link link-primary" id="btn-new-batch-dedupe" disabled>Dedupe list</button>
+    </div>
+</div>
+
+<div id="new-batch-loading-spinner" class="container container-center hidden">
+    <div class="spinner-container">
+        <div class="spinner"></div>
+    </div>
+</div>
+
+<div class="utils-container">
+    <div id="new-batch-error-msg" class="error-msg hidden">
+        Error encountered creating new batch set. Please try again.
+    </div>
+    <div id="new-batch-bad-files-msg" class="error-msg hidden">
+        <p>The server did not recognize the following files. (Did bad text get into the input?) Please remove them
+            and try again.</p>
+        <p>Unknown files:</p>
+        <pre id="new-batch-bad-files-list">http://localhost:5001/search</pre>
+    </div>
+    <div id="new-batch-success-msg" class="success-msg hidden">
+        Successfully created new batch set. Selected papers available at:
+        <pre id="new-batch-uri">http://localhost:5001/search</pre>
+    </div>
+    <div id="ingest-error-msg" class="error-msg hidden">
+        Error encountered creating new batch set. Please try again.
+    </div>
+    <div id="ingest-success-msg" class="success-msg hidden">
+        Successfully ingested files into Simon.
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='gdrive.js') }}"></script>
+{% endblock %}

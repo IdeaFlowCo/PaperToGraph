@@ -450,6 +450,23 @@ ul.results-list {
     white-space: nowrap;
 }
 
+.results-list .file-name {
+    /* flex-shrink: 0; */
+    /* width: 500px; */
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.results-list .drive-id {
+    flex-shrink: 0;
+    width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .results-list li+li {
     border-top: 0;
 }

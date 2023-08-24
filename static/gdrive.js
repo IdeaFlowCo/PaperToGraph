@@ -6,7 +6,7 @@
     const searchSpinner = document.querySelector("#search-loading-spinner");
     const searchErrorMsg = document.querySelector('#search-error-msg');
 
-    const matchingPapersLabel = document.querySelector("#matching-papers-label");
+    const matchingFilesLabel = document.querySelector("#matching-files-label");
     const searchResultsList = document.querySelector("#search-results-list");
     const searchResultsPlaceholder = document.querySelector("#search-results-placeholder");
     const searchResultsEmpty = document.querySelector("#search-results-empty");
@@ -22,6 +22,7 @@
 
     const newBatchList = document.querySelector("#new-batch-list");
     const newBatchCreateButton = document.querySelector("#btn-new-batch-set");
+    const ingestToSimonButton = document.querySelector('#btn-ingest-to-simon');
     const newBatchDedupeButton = document.querySelector("#btn-new-batch-dedupe");
 
     const newBatchSpinner = document.querySelector("#new-batch-loading-spinner");
@@ -33,10 +34,15 @@
     const newBatchSuccessMsg = document.querySelector('#new-batch-success-msg');
     const newBatchUriHolder = document.querySelector('#new-batch-uri');
 
+    const ingestErrorMsg = document.querySelector('#ingest-error-msg');
+    const ingestSuccessMsg = document.querySelector('#ingest-success-msg');
+
     const buildSearchRequestBody = () => {
         const query = searchInput.value;
+        const mimeType = document.querySelector('input[name="mime-type-select"]:checked').value;
         const body = {
             'query': query,
+            'mime_type': mimeType,
         };
 
         return body;
@@ -60,7 +66,7 @@
 
         filePages = [];
         curFilePage = 0;
-        matchingPapersLabel.textContent = 'Matching papers';
+        matchingFilesLabel.textContent = 'Matching papers';
     };
 
     const disableButtons = () => {
@@ -73,39 +79,28 @@
     const resetButtonStates = () => {
         searchButton.disabled = false;
         addToListButton.disabled = !searchResultsList.innerHTML.trim();
-        newBatchCreateButton.disabled = !newBatchList.innerHTML.trim();
+        // newBatchCreateButton.disabled = !newBatchList.innerHTML.trim();
+        ingestToSimonButton.disabled = !newBatchList.innerHTML.trim();
         newBatchDedupeButton.disabled = !newBatchList.innerHTML.trim();
     }
 
     const displayCurFilePage = () => {
         searchResultsList.innerHTML = '';
         for (const file of filePages[curFilePage]) {
-            const pmcId = file.pmcId;
-            const articleType = file.articleType;
-            const title = file.title;
-            const doi = file.doi;
-            const path = file.path;
+            const driveId = file.driveId;
+            const name = file.name;
             const resultLiEl = document.createElement('li');
-            const pmcIdEl = document.createElement('span');
-            pmcIdEl.classList.add('pmc-id');
-            pmcIdEl.textContent = pmcId;
-            resultLiEl.appendChild(pmcIdEl);
-            const articleTypeEl = document.createElement('span');
-            articleTypeEl.classList.add('article-type');
-            articleTypeEl.textContent = articleType;
-            resultLiEl.appendChild(articleTypeEl);
-            const titleEl = document.createElement('span');
-            titleEl.classList.add('article-title');
-            titleEl.textContent = title;
-            titleEl.title = title;
-            resultLiEl.appendChild(titleEl);
-            // const doiEl = document.createElement('span');
-            // doiEl.textContent = doi;
-            // resultLiEl.appendChild(doiEl);
-            // const pathEl = document.createElement('span');
-            // pathEl.classList.add('article-path');
-            // pathEl.textContent = path;
-            // resultLiEl.appendChild(pathEl);
+            const driveIdEl = document.createElement('span');
+            driveIdEl.classList.add('drive-id');
+            driveIdEl.textContent = driveId;
+            // Set el title so the full text appears on hover (will be cut off)
+            driveIdEl.title = driveId;
+            resultLiEl.appendChild(driveIdEl);
+            const nameEl = document.createElement('span');
+            nameEl.classList.add('file-name');
+            nameEl.textContent = name;
+            nameEl.title = name;
+            resultLiEl.appendChild(nameEl);
             searchResultsList.appendChild(resultLiEl);
         }
 
@@ -225,7 +220,7 @@
 
         searchSpinner.classList.remove('hidden');
 
-        const response = await fetch('doc-search', {
+        const response = await fetch('gdrive-search', {
             method: 'POST',
             mode: 'cors',
             headers: {
@@ -248,20 +243,18 @@
                 return;
             }
             foundFiles = foundFiles.map(file => {
-                // PMC ID and Path will always be provided; other fields may be missing
-                const pmcId = file.pmc_id;
-                const path = file.path;
+                const driveId = file.id;
+                const name = file.name;
 
-                const title = file.title || '[Title not found]';
                 const articleType = file.article_type || '[Type not found]';
                 const doi = file.doi || '[DOI not found]';
-                return { pmcId, path, title, articleType, doi };
+                return { driveId, name };
             });
             foundFiles = foundFiles.sort(
-                // Sort by paper ID; first by length, then alphanumerically (so that PMC10* IDs come after PMC9* IDs)
-                (a, b) => a.pmcId.length != b.pmcId.length ? a.pmcId.length - b.pmcId.length : a.pmcId.localeCompare(b.pmcId)
+                // Sort by file names
+                (a, b) => a.name.localeCompare(b.name)
             );
-            matchingPapersLabel.textContent = `${foundFiles.length} papers found`;
+            matchingFilesLabel.textContent = `${foundFiles.length} files found`;
             displayFileResults(foundFiles);
             resetButtonStates();
         } catch (e) {
@@ -285,7 +278,7 @@
         let newFilesString = '';
         for (const filePage of filePages) {
             for (const file of filePage) {
-                newFilesString += file.path + '\t' + file.title + '<br>';
+                newFilesString += file.driveId + '\t' + file.name + '<br>';
             }
         }
         newBatchList.innerHTML = newBatchList.innerHTML + '<br>' + newFilesString;
@@ -317,9 +310,10 @@
         newBatchErrorMsg.classList.add('hidden');
         newBatchBadFilesMsg.classList.add('hidden');
         newBatchSuccessMsg.classList.add('hidden');
+        ingestErrorMsg.classList.add('hidden');
+        ingestSuccessMsg.classList.add('hidden');
 
         newBatchSpinner.classList.remove('hidden');
-
 
         const response = await fetch('new-doc-set', {
             method: 'POST',
@@ -360,13 +354,78 @@
         }
     });
 
+
+    const buildIngestRequestBody = () => {
+        const batchItems = newBatchList.innerHTML.split('<br>').map((row) => {
+            if (row.indexOf('\t') == -1) return row.trim();
+            const path = row.split('\t')[0];
+            return path.trim()
+        });
+        const body = {
+            'files': batchItems,
+        };
+
+        return body;
+    }
+
+    ingestToSimonButton.addEventListener('click', async () => {
+        disableButtons();
+
+        newBatchErrorMsg.classList.add('hidden');
+        newBatchBadFilesMsg.classList.add('hidden');
+        newBatchSuccessMsg.classList.add('hidden');
+        ingestErrorMsg.classList.add('hidden');
+        ingestSuccessMsg.classList.add('hidden');
+
+        newBatchSpinner.classList.remove('hidden');
+
+        const response = await fetch('gdrive-ingest', {
+            method: 'POST',
+            mode: 'cors',
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(buildIngestRequestBody())
+        });
+
+
+        try {
+            const parsedResponse = await response.json();
+            console.log('Received create batch set response:', parsedResponse);
+
+            newBatchSpinner.classList.add('hidden');
+
+            if (!!parsedResponse.error) {
+                console.error('Error from server when ingesting files to Simon:', parsedResponse.error);
+                ingestErrorMsg.classList.remove('hidden');
+            } else {
+                ingestSuccessMsg.classList.remove('hidden');
+            }
+            resetButtonStates();
+        } catch (e) {
+            console.error('Error from server when ingesting files to Simon:', e);
+            newBatchSpinner.classList.add('hidden');
+            ingestErrorMsg.classList.remove('hidden');
+            resetButtonStates();
+        }
+    });
+
     newBatchDedupeButton.addEventListener('click', async () => {
         disableButtons();
         const batchItems = newBatchList.innerHTML.split('<br>')
             .map((row) => row.trim())
             .filter((item) => !!item);
-        // Dedupe then sort
-        newBatchList.innerHTML = [...new Set(batchItems)].sort().join('<br>');
+        // Dedupe then sort by file names
+        newBatchList.innerHTML = [
+            ...new Set(batchItems)
+        ].map((row) => row.split('\t'))
+            .sort((a, b) => {
+                if (a.length < 2) return -1;
+                if (b.length < 2) return 1;
+                return a[1].localeCompare(b[1]);
+            })
+            .map((row) => row.join('\t'))
+            .join('<br>');
         resetButtonStates();
     });
 

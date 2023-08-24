@@ -1,6 +1,9 @@
 # Env variables file for local running
 /.env
 
+# OAuth client secrets files
+/oauth_client_secrets.json
+
 # Virtual environments
 /venv/
 

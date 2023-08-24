@@ -2,13 +2,18 @@ import asyncio
 import json
 import os
 
+import google.oauth2.credentials
+import google_auth_oauthlib.flow
+import googleapiclient.discovery
+
 import sentry_sdk
 from sentry_sdk.integrations.quart import QuartIntegration
 
-from quart import Quart, request, jsonify, render_template, make_response
+from quart import Quart, request, session, jsonify, render_template, make_response, redirect, url_for
 
 import aws
 import batch
+import gdrive
 import gpt
 import llama
 import parse
@@ -60,9 +65,10 @@ async def _render_template(template, **kwargs):
         {'name': 'Home', 'url': '/'},
         {'name': 'Batch Processing', 'url': '/batch'},
         {'name': 'Query', 'url': '/query'},
+        {'name': 'Ingest', 'url': '/gdrive'},
     ]
     if app.config.get('PAPERS_DIR'):
-        nav_links.append({'name': 'Search', 'url': '/search'})
+        nav_links.insert(3, {'name': 'Search', 'url': '/search'})
     kwargs['nav_links'] = nav_links
     kwargs['active_page'] = request.path
 
@@ -316,6 +322,114 @@ async def make_new_doc_set():
     )
 
 
+@app.route('/gdrive')
+async def gdrive_page():
+    if gdrive.CREDS_SESSION_KEY not in session:
+        return redirect(url_for('gdrive_auth'))
+
+    file_types = [
+        {'label': 'Plain Text', 'value': gdrive.FileType.PLAIN_TEXT},
+        {'label': 'PDF', 'value': gdrive.FileType.PDF},
+        {'label': 'Google Doc', 'value': gdrive.FileType.GOOGLE_DOC},
+    ]
+    return await _render_template("gdrive.html", file_types=file_types)
+
+
+@app.route('/gdrive-auth')
+async def gdrive_auth():
+    flow = gdrive.build_oauth_flow()
+
+    # The URI created here must exactly match one of the authorized redirect URIs
+    # for the OAuth 2.0 client, which you configured in the API Console. If this
+    # value doesn't match an authorized URI, you will get a 'redirect_uri_mismatch'
+    # error.
+    flow.redirect_uri = url_for('google_oauth_callback', _external=True)
+
+    authorization_url, state = flow.authorization_url(
+        # Enable offline access so that you can refresh an access token without
+        # re-prompting the user for permission. Recommended for web server apps.
+        access_type='offline',
+        # Enable incremental authorization. Recommended as a best practice.
+        include_granted_scopes='true')
+
+    # Store the state so the callback can verify the auth server response.
+    session['state'] = state
+
+    return redirect(authorization_url)
+
+
+@app.route('/google-oauth')
+async def google_oauth_callback():
+    # Specify the state when creating the flow in the callback so that it can
+    # verified in the authorization server response.
+    state = session['state']
+
+    flow = gdrive.build_oauth_flow(state=state)
+    flow.redirect_uri = url_for('google_oauth_callback', _external=True)
+
+    # Use the authorization server's response to fetch the OAuth 2.0 tokens.
+    authorization_response = request.url
+    flow.fetch_token(authorization_response=authorization_response)
+
+    # Store credentials in the session.
+    credentials = flow.credentials
+    session[gdrive.CREDS_SESSION_KEY] = gdrive.credentials_to_dict(credentials)
+
+    return redirect(url_for('gdrive_page'))
+
+
+@app.route('/gdrive-revoke')
+async def gdrive_revoke():
+    if gdrive.CREDS_SESSION_KEY in session:
+        credentials = google.oauth2.credentials.Credentials(**session[gdrive.CREDS_SESSION_KEY])
+        gdrive.revoke_credentials(credentials)
+        del session[gdrive.CREDS_SESSION_KEY]
+    return redirect(url_for('gdrive_page'))
+
+
+@app.route('/gdrive-search', methods=["POST"])
+async def gdrive_search():
+    post = await request.get_json()
+    log_msg('POST request to /gdrive-search endpoint')
+    _log_args(post)
+
+    if gdrive.CREDS_SESSION_KEY not in session:
+        return jsonify({'status': 'error', 'message': 'Google OAuth credentials not in session'}), 400
+
+    required_args = ['query', 'mime_type']
+    if post is None or not all(arg in post for arg in required_args):
+        return jsonify(_wrong_payload_response()), 400
+
+    query = post.get('query')
+    mime_type = post.get('mime_type')
+    credentials = google.oauth2.credentials.Credentials(**session[gdrive.CREDS_SESSION_KEY])
+    return await utils.make_response_with_heartbeat(
+        gdrive.asearch_files(credentials=credentials, file_name=query, file_type=mime_type),
+        log_label='Doc search'
+    )
+
+
+@app.route('/gdrive-ingest', methods=["POST"])
+async def ingest_from_gdrive():
+    post = await request.get_json()
+    log_msg('POST request to /gdrive-ingest endpoint')
+    _log_args(post)
+
+    if gdrive.CREDS_SESSION_KEY not in session:
+        return jsonify({'status': 'error', 'message': 'Google OAuth credentials not in session'}), 400
+
+    required_args = ['files']
+    if post is None or not all(arg in post for arg in required_args):
+        return jsonify(_wrong_payload_response()), 400
+
+    files = post.get('files')
+    credentials = google.oauth2.credentials.Credentials(**session[gdrive.CREDS_SESSION_KEY])
+    return await utils.make_response_with_heartbeat(
+        app.simon_client.ingest_gdrive_file_set(credentials, files),
+        log_label='Upload new batch set'
+    )
+
+
 @app.before_serving
 async def server_setup():
     utils.setup_logger(**app.config['logger'])
@@ -364,6 +478,7 @@ async def search_setup():
 if __name__ == '__main__':
     print('Starting server...')
     if app.config.get('DEV_SERVER'):
+        os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
         app.run(host="127.0.0.1", port=5001, debug=True)
     else:
         app.run_server(use_reloader=False)
