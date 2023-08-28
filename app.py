@@ -3,15 +3,12 @@ import json
 import os
 
 import google.oauth2.credentials
-import google_auth_oauthlib.flow
-import googleapiclient.discovery
 
 import sentry_sdk
 from sentry_sdk.integrations.quart import QuartIntegration
 
 from quart import Quart, request, session, jsonify, render_template, make_response, redirect, url_for
 
-import aws
 import batch
 import gdrive
 import gpt
@@ -61,15 +58,8 @@ def _wrong_payload_response(message="wrong payload"):
 
 
 async def _render_template(template, **kwargs):
-    nav_links = [
-        {'name': 'Home', 'url': '/'},
-        {'name': 'Batch Processing', 'url': '/batch'},
-        {'name': 'Query', 'url': '/query'},
-        {'name': 'Ingest', 'url': '/gdrive'},
-    ]
-    if app.config.get('PAPERS_DIR'):
-        nav_links.insert(3, {'name': 'Search', 'url': '/search'})
-    kwargs['nav_links'] = nav_links
+    kwargs['app_title'] = app.config.get('APP_TITLE', 'Paper2Graph')
+    kwargs['nav_links'] = app.config.get('nav_links', [])
     kwargs['active_page'] = request.path
 
     # Only include the Sentry reporting JS if server is configured to report backend errors
@@ -78,9 +68,21 @@ async def _render_template(template, **kwargs):
     return await render_template(template, **kwargs)
 
 
+def _url_for(page, external=False):
+    if not external:
+        return url_for(page)
+
+    if app.config.get('DEV_SERVER'):
+        return url_for(page, _external=True)
+    else:
+        return url_for(page, _external=True, _scheme='https')
+
+
 @app.route('/')
 async def home():
-    return await _render_template("index.html")
+    if app.config.get('APP_MODE', 'paper2graph') == 'querymydrive':
+        return await _render_template("query.html")
+    return await _render_template("translate.html")
 
 
 @app.route('/hackathon')
@@ -103,11 +105,6 @@ async def ask_llama():
         llama.aask_llama(query),
         log_label='Llama query'
     )
-
-
-@app.route('/extractor')
-async def extractor():
-    return await _render_template("index.html")
 
 
 @app.route("/raw-parse", methods=["POST"])
@@ -257,7 +254,9 @@ async def batch_log():
 
 @app.route('/query')
 async def query_page():
-    return await _render_template("query.html")
+    # show_kb_options = not not app.config.get('DEV_SERVER')
+    show_kb_options = True
+    return await _render_template("query.html", show_kb_options=show_kb_options)
 
 
 @app.route('/query-simon', methods=["POST"])
@@ -270,9 +269,16 @@ async def query_simon():
     if post is None or not all(arg in post for arg in required_args):
         return jsonify(_wrong_payload_response()), 400
 
+    app_mode = app.config.get('APP_MODE', 'paper2graph')
+    kb = post.get('kb', None)
+    if app_mode == 'querymydrive' or kb == 'querymydrive':
+        simon_client = app.gdrive_simon_client
+    else:
+        simon_client = app.simon_client
+
     query = post.get('query')
     return await utils.make_response_with_heartbeat(
-        app.simon_client.query_simon(query),
+        simon_client.query_simon(query),
         log_label='simon query'
     )
 
@@ -325,7 +331,7 @@ async def make_new_doc_set():
 @app.route('/gdrive')
 async def gdrive_page():
     if gdrive.CREDS_SESSION_KEY not in session:
-        return redirect(url_for('gdrive_auth'))
+        return redirect(_url_for('gdrive_auth'))
 
     file_types = [
         {'label': 'Plain Text', 'value': gdrive.FileType.PLAIN_TEXT},
@@ -343,7 +349,7 @@ async def gdrive_auth():
     # for the OAuth 2.0 client, which you configured in the API Console. If this
     # value doesn't match an authorized URI, you will get a 'redirect_uri_mismatch'
     # error.
-    flow.redirect_uri = url_for('google_oauth_callback', _external=True)
+    flow.redirect_uri = _url_for('google_oauth_callback', external=True)
 
     authorization_url, state = flow.authorization_url(
         # Enable offline access so that you can refresh an access token without
@@ -365,7 +371,7 @@ async def google_oauth_callback():
     state = session['state']
 
     flow = gdrive.build_oauth_flow(state=state)
-    flow.redirect_uri = url_for('google_oauth_callback', _external=True)
+    flow.redirect_uri = _url_for('google_oauth_callback', external=True)
 
     # Use the authorization server's response to fetch the OAuth 2.0 tokens.
     authorization_response = request.url
@@ -375,7 +381,7 @@ async def google_oauth_callback():
     credentials = flow.credentials
     session[gdrive.CREDS_SESSION_KEY] = gdrive.credentials_to_dict(credentials)
 
-    return redirect(url_for('gdrive_page'))
+    return redirect(_url_for('gdrive_page'))
 
 
 @app.route('/gdrive-revoke')
@@ -384,7 +390,7 @@ async def gdrive_revoke():
         credentials = google.oauth2.credentials.Credentials(**session[gdrive.CREDS_SESSION_KEY])
         gdrive.revoke_credentials(credentials)
         del session[gdrive.CREDS_SESSION_KEY]
-    return redirect(url_for('gdrive_page'))
+    return redirect(_url_for('gdrive_page'))
 
 
 @app.route('/gdrive-search', methods=["POST"])
@@ -425,9 +431,29 @@ async def ingest_from_gdrive():
     files = post.get('files')
     credentials = google.oauth2.credentials.Credentials(**session[gdrive.CREDS_SESSION_KEY])
     return await utils.make_response_with_heartbeat(
-        app.simon_client.ingest_gdrive_file_set(credentials, files),
+        app.gdrive_simon_client.ingest_gdrive_file_set(credentials, files),
         log_label='Upload new batch set'
     )
+
+
+def _setup_nav_links(app_mode='paper2graph'):
+    if app_mode == 'querymydrive':
+        app.config['nav_links'] = [
+            {'name': 'Home', 'url': '/'},
+            {'name': 'Ingest', 'url': '/gdrive'},
+        ]
+        return
+
+    nav_links = [
+        {'name': 'Home', 'url': '/'},
+        {'name': 'Batch Processing', 'url': '/batch'},
+        {'name': 'Query', 'url': '/query'},
+        {'name': 'Ingest', 'url': '/gdrive'},
+    ]
+    if app.config.get('PAPERS_DIR'):
+        nav_links.insert(3, {'name': 'Search', 'url': '/search'})
+
+    app.config['nav_links'] = nav_links
 
 
 @app.before_serving
@@ -435,6 +461,9 @@ async def server_setup():
     utils.setup_logger(**app.config['logger'])
     log_msg('Logger initialized')
     utils.log_config_vars(app.config)
+
+    app_mode = app.config.get('APP_MODE', 'paper2graph')
+    _setup_nav_links(app_mode=app_mode)
 
 
 @app.before_serving
@@ -450,6 +479,11 @@ async def batch_job_setup():
 @app.before_serving
 async def simon_setup():
     app.simon_client = simon_client.SimonClient(app.config)
+
+
+@app.before_serving
+async def gdrive_ingest_setup():
+    app.gdrive_simon_client = simon_client.SimonClient(app.config, uid_override='querymydrive')
 
 
 @app.before_serving

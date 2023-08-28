@@ -7,10 +7,8 @@ import time
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import OpenAIEmbeddings
 
-from elasticsearch import Elasticsearch
+from psycopg2 import connect
 
-# Add submodule dir to path to allow imports
-sys.path.append('./simon')
 from simon import AgentContext, Search
 from simon.components.documents import parse_text, index_document
 
@@ -20,21 +18,25 @@ from utils import log_msg
 
 
 class SimonClient:
-    def __init__(self, config):
+    def __init__(self, config, uid_override=None):
         self.config = config
-        self._context = self._agent_context_from_config(config)
+        self._context = self._agent_context_from_config(config, uid_override=uid_override)
         self._search_client = Search(self._context)
 
-    def _agent_context_from_config(self, config):
+    def _agent_context_from_config(self, config, uid_override=None):
         openai_api_key = config['OPENAI_API_KEY']
         llm = ChatOpenAI(openai_api_key=openai_api_key, model_name="gpt-3.5-turbo", temperature=0)
         reason_llm = ChatOpenAI(openai_api_key=openai_api_key, model_name="gpt-4", temperature=0)
         embedding = OpenAIEmbeddings(openai_api_key=openai_api_key, model="text-embedding-ada-002")
 
-        es = Elasticsearch(**config['elastic'])
-        uid = 'paper2graph'
+        pg = connect(**config['postgres'])
 
-        context = AgentContext(llm, reason_llm, embedding, es, uid)
+        if uid_override:
+            uid = uid_override
+        else:
+            uid = config['SIMON_UID']
+
+        context = AgentContext(llm, reason_llm, embedding, pg, uid)
         return context
 
     async def query_simon(self, query):
@@ -47,16 +49,42 @@ class SimonClient:
 
         return result
 
-    async def ingest_gdrive_file(self, gdrive_creds, file_id):
+    async def ingest_gdrive_file(self, gdrive_creds, file_id, max_retries=3):
         file = await gdrive.aget_file(credentials=gdrive_creds, file_id=file_id)
         if file is None:
             logging.error(f'Failed to get file with id {file_id}, skipping ingestion')
             return
         file_name = file['metadata']['name']
         logging.info(f'Parsing file {file_name} ({file_id})...')
-        parsed_doc = parse_text(file['content'], title=file_name, source=f'gdrive:{file_id}')
+        retries = 0
+        while retries < max_retries:
+            try:
+                parsed_doc = parse_text(file['content'], title=file_name, source=f'gdrive:{file_id}')
+            except Exception as err:
+                retries += 1
+                logging.error(f'Error while parsing file {file_name} ({file_id}): {err}')
+                continue
+
+        if retries == max_retries:
+            logging.error(
+                f'Failed to parse file {file_name} ({file_id}) after {max_retries} retries, skipping ingestion')
+            return
+
         logging.info(f'Indexing file {file_name} ({file_id})...')
-        index_document(parsed_doc, context=self._context)
+
+        retries = 0
+        while retries < max_retries:
+            try:
+                index_document(parsed_doc, context=self._context)
+            except Exception as err:
+                retries += 1
+                logging.error(f'Error while indexing file {file_name} ({file_id}): {err}')
+                continue
+
+        if retries == max_retries:
+            logging.error(
+                f'Failed to index file {file_name} ({file_id}) after {max_retries} retries, skipping ingestion')
+            return
 
     async def ingest_gdrive_file_set(self, gdrive_creds, files):
         for f in files:

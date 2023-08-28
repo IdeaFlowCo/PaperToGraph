@@ -14,6 +14,11 @@
             'query': query,
         };
 
+        const kbSelectEl = document.querySelector('input[name="kb-select"]:checked');
+        if (!!kbSelectEl) {
+            body['kb'] = kbSelectEl.value;
+        }
+
         return body;
     }
 

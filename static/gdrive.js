@@ -358,8 +358,8 @@
     const buildIngestRequestBody = () => {
         const batchItems = newBatchList.innerHTML.split('<br>').map((row) => {
             if (row.indexOf('\t') == -1) return row.trim();
-            const path = row.split('\t')[0];
-            return path.trim()
+            const fileId = row.split('\t')[0];
+            return fileId.trim()
         });
         const body = {
             'files': batchItems,

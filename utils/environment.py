@@ -39,6 +39,15 @@ def load_config(cl_args=None):
     }
     config_vars['neo4j'] = neo_config
 
+    pg_config = {
+        'host': config_vars.pop('PG_HOST', None),
+        'port': config_vars.pop('PG_PORT', None),
+        'user': config_vars.pop('PG_USER', None),
+        'password': config_vars.pop('PG_PASS', None),
+        'database': config_vars.pop('PG_DATABASE', None),
+    }
+    config_vars['postgres'] = pg_config
+
     es_config = {}
     elastic_cloud_id = config_vars.pop('ELASTIC_CLOUD_ID', None)
     elastic_url = config_vars.pop('ELASTIC_URL', None)
@@ -103,6 +112,10 @@ def log_config_vars(config):
     if 'password' in neo_config and neo_config['password']:
         neo_config['password'] = secret_to_log_str(neo_config['password'])
 
+    pg_config = config['postgres'].copy()
+    if 'password' in pg_config and pg_config['password']:
+        pg_config['password'] = secret_to_log_str(pg_config['password'])
+
     es_config = config['elastic'].copy()
     if 'basic_auth' in es_config and es_config['basic_auth']:
         es_config['basic_auth'] = (
@@ -115,6 +128,7 @@ def log_config_vars(config):
         'aws': aws_config,
         'neo4j': neo_config,
         'es': es_config,
+        'postgres': pg_config,
     }
     configs_to_log = json.dumps(configs_to_log, indent=2)
     log_msg(f'Using the following configuration:\n{configs_to_log}')

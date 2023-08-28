@@ -9,6 +9,20 @@
         <input id="query-input" class="text-input" />
         <button class="link link-primary" id="btn-search">Search</button>
     </div>
+
+    {% if show_kb_options %}
+    <span class="label">Knowledge base to query</span>
+    <div class="kb-selection">
+        <label>
+            <input type="radio" name="kb-select" value="papertograph" checked>
+            Paper2Graph
+        </label>
+        <label>
+            <input type="radio" name="kb-select" value="querymydrive">
+            Google Drive
+        </label>
+    </div>
+    {% endif %}
 </div>
 
 <div id="search-loading-spinner" class="container container-center hidden">
