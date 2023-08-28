@@ -31,7 +31,11 @@
 
         // Replace citations in the answer with links to corresponding sources
         const modifiedAnswer = answer.replace(citationRegex, (match, citationNumber) => {
-            const sourceUrl = answerResources[citationNumber]?.chunk?.metadata?.source;
+            let sourceUrl = answerResources[citationNumber]?.chunk?.metadata?.source;
+            if (sourceUrl && sourceUrl.startsWith('gdrive:')) {
+                const fileId = sourceUrl.slice('gdrive:'.length);
+                sourceUrl = `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
+            }
             if (sourceUrl) {
                 return `<a href="${sourceUrl}" target="_blank">[${citationNumber}]</a>`;
             }
@@ -71,7 +75,11 @@
             let resourcesText = '';
             const citationsBySource = {};
             for (const [refNum, refData] of Object.entries(parsed.answer_resources)) {
-                const sourceUrl = refData.chunk.metadata.source;
+                let sourceUrl = refData.chunk.metadata.source;
+                if (sourceUrl.startsWith('gdrive:')) {
+                    const fileId = sourceUrl.slice('gdrive:'.length);
+                    sourceUrl = `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
+                }
 
                 let title = refData.chunk.metadata.title
                 title = title.endsWith('.txt') ? title.slice(0, -4) : title;
