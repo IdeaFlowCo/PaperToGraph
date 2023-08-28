@@ -96,6 +96,8 @@ def add_logger_args(parser):
 
 
 def secret_to_log_str(secret):
+    if not secret:
+        return ''
     return f'{secret[:3]}...{secret[-3:]}'
 
 

@@ -1,7 +1,6 @@
 import asyncio
 import json
 import logging
-import sys
 import time
 
 from langchain.chat_models import ChatOpenAI
@@ -59,7 +58,8 @@ class SimonClient:
         retries = 0
         while retries < max_retries:
             try:
-                parsed_doc = parse_text(file['content'], title=file_name, source=f'gdrive:{file_id}')
+                parsed_doc = await asyncio.to_thread(parse_text, file['content'], title=file_name, source=f'gdrive:{file_id}')
+                break
             except Exception as err:
                 retries += 1
                 logging.error(f'Error while parsing file {file_name} ({file_id}): {err}')
@@ -75,7 +75,8 @@ class SimonClient:
         retries = 0
         while retries < max_retries:
             try:
-                index_document(parsed_doc, context=self._context)
+                await asyncio.to_thread(index_document, parsed_doc, context=self._context)
+                break
             except Exception as err:
                 retries += 1
                 logging.error(f'Error while indexing file {file_name} ({file_id}): {err}')

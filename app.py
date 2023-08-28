@@ -432,7 +432,7 @@ async def ingest_from_gdrive():
     credentials = google.oauth2.credentials.Credentials(**session[gdrive.CREDS_SESSION_KEY])
     return await utils.make_response_with_heartbeat(
         app.gdrive_simon_client.ingest_gdrive_file_set(credentials, files),
-        log_label='Upload new batch set'
+        log_label='Simon ingest from Google Drive'
     )
 
 
