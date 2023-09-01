@@ -37,3 +37,21 @@ def get_s3_client(cl_args=None):
         raise Exception('AWS credentials not found')
 
     return boto3.client('s3', **config)
+
+
+def get_sagemaker_client(cl_args=None):
+    '''
+    Create an S3 client, optionally using credential overrides from the commandline.
+    '''
+    config = utils.load_config(cl_args=cl_args)['aws']
+
+    aws_access_key_id = config.get('aws_access_key_id')
+    aws_secret_access_key = config.get('aws_secret_access_key')
+    if not aws_access_key_id or not aws_secret_access_key:
+        log_error(
+            'AWS credentials not found! '
+            'AWS_SECRET_KEY_ID and AWS_SECRET_ACCESS_KEY must be provided in environment.'
+        )
+        raise Exception('AWS credentials not found')
+
+    return boto3.client('sagemaker-runtime', region_name="us-east-1", **config)
