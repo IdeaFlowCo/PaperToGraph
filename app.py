@@ -80,31 +80,12 @@ def _url_for(page, external=False):
 
 @app.route('/')
 async def home():
-    if app.config.get('APP_MODE', 'paper2graph') == 'querymydrive':
+    app_mode = app.config.get('APP_MODE', 'paper2graph')
+    if app_mode == 'querymydrive':
         return await _render_template("query.html")
+    elif app_mode == 'rarediseaseguru':
+        return await _render_template("hackathon.html")
     return await _render_template("translate.html")
-
-
-@app.route('/hackathon')
-async def hackathon():
-    return await _render_template("hackathon.html")
-
-
-@app.route('/ask-llama', methods=["POST"])
-async def ask_llama():
-    post = await request.get_json()
-    log_msg('POST request to /ask-llama endpoint')
-    _log_args(post)
-
-    required_args = ['query']
-    if post is None or not all(arg in post for arg in required_args):
-        return jsonify(_wrong_payload_response()), 400
-
-    query = post.get('query')
-    return await utils.make_response_with_heartbeat(
-        llama.aask_llama(query),
-        log_label='Llama query'
-    )
 
 
 @app.route("/raw-parse", methods=["POST"])
@@ -436,11 +417,48 @@ async def ingest_from_gdrive():
     )
 
 
+@app.route('/hackathon')
+async def hackathon():
+    return await _render_template("hackathon.html")
+
+
+@app.route('/ask-llm', methods=["POST"])
+async def ask_llm():
+    post = await request.get_json()
+    log_msg('POST request to /ask-llm endpoint')
+    _log_args(post)
+
+    required_args = ['query', 'llm']
+    if post is None or not all(arg in post for arg in required_args):
+        return jsonify(_wrong_payload_response()), 400
+
+    query = post.get('query')
+    llm_choice = post.get('llm')
+
+    if llm_choice == 'llama-2023-08-14':
+        return await utils.make_response_with_heartbeat(
+            llama.aask_llama(query),
+            log_label='Llama query'
+        )
+    elif llm_choice == 'davinci-2023-08-14':
+        return await utils.make_response_with_heartbeat(
+            gpt.ask_ft_gpt(query, model='davinci:ft-ideaflow-2023-08-14-01-33-40'),
+            log_label='Fine-tuned GPT query'
+        )
+    else:
+        return jsonify({'status': 'error', 'message': 'invalid llm choice'}), 400
+
+
 def _setup_nav_links(app_mode='paper2graph'):
     if app_mode == 'querymydrive':
         app.config['nav_links'] = [
             {'name': 'Home', 'url': '/'},
             {'name': 'Ingest', 'url': '/gdrive'},
+        ]
+        return
+    elif app_mode == 'rarediseaseguru':
+        app.config['nav_links'] = [
+            {'name': 'Home', 'url': '/'},
         ]
         return
 

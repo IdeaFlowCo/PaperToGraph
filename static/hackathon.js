@@ -1,29 +1,24 @@
 'use strict';
 (() => {
-    const promptButton = document.querySelector("#btn-prompt-parse");
-    const promptForm = document.getElementById("promptForm");
+    const searchButton = document.getElementById("btn-search");
     const responseText = document.getElementById("response-text");
     const loadingSpinner = document.getElementById("query-loading");
 
-    function preventFormSubmit(event) {
-        event.preventDefault();
-    }
-
-    promptForm.addEventListener("submit", preventFormSubmit);
-
     const buildRequestBody = () => {
         const query = document.querySelector("#query-input").value;
+        const model = document.querySelector('input[name="model-select"]:checked').value;
         const body = {
             'query': query,
+            'llm': model,
         };
         return body;
     }
 
     async function handlePromptClick() {
-        promptButton.disabled = true;
+        searchButton.disabled = true;
         loadingSpinner.classList.remove("hidden");
 
-        const response = await fetch('ask-llama', {
+        const response = await fetch('ask-llm', {
             method: 'POST',
             mode: 'cors',
             headers: {
@@ -35,18 +30,16 @@
         try {
             const parsedResponse = await response.json();
             console.log('Parsed response json:', parsedResponse);
-            promptButton.disabled = false;
+            searchButton.disabled = false;
             loadingSpinner.classList.add("hidden");
 
             responseText.value = parsedResponse.answer;
 
         } catch (e) {
-            promptButton.disabled = false;
+            searchButton.disabled = false;
             loadingSpinner.classList.add("hidden");
             console.error(e);
         }
     }
-    promptButton.addEventListener("click", handlePromptClick);
-
-
+    searchButton.addEventListener("click", handlePromptClick);
 })();
