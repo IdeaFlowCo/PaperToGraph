@@ -102,7 +102,8 @@ async def raw_parse():
     model = gpt.sanitize_gpt_model_choice(post.get('model'))
     prompt_override = post.get('prompt_override', None)
     response = await make_response(
-        parse.async_parse_with_heartbeat(text, model=model, prompt_override=prompt_override),
+        parse.async_parse_with_heartbeat(
+            text, model=model, prompt_override=prompt_override),
         {
             'Content-Type': 'application/json',
             'Cache-Control': 'no-cache',
@@ -287,7 +288,8 @@ async def doc_search():
     papers_dir = app.search_config['papers_dir']
     metadata_file = app.search_config['metadata_file']
     return await utils.make_response_with_heartbeat(
-        search.asearch_docs(query, papers_dir=papers_dir, metadata_file=metadata_file),
+        search.asearch_docs(query, papers_dir=papers_dir,
+                            metadata_file=metadata_file),
         log_label='Doc search'
     )
 
@@ -368,7 +370,8 @@ async def google_oauth_callback():
 @app.route('/gdrive-revoke')
 async def gdrive_revoke():
     if gdrive.CREDS_SESSION_KEY in session:
-        credentials = google.oauth2.credentials.Credentials(**session[gdrive.CREDS_SESSION_KEY])
+        credentials = google.oauth2.credentials.Credentials(
+            **session[gdrive.CREDS_SESSION_KEY])
         gdrive.revoke_credentials(credentials)
         del session[gdrive.CREDS_SESSION_KEY]
     return redirect(_url_for('gdrive_page'))
@@ -389,9 +392,11 @@ async def gdrive_search():
 
     query = post.get('query')
     mime_type = post.get('mime_type')
-    credentials = google.oauth2.credentials.Credentials(**session[gdrive.CREDS_SESSION_KEY])
+    credentials = google.oauth2.credentials.Credentials(
+        **session[gdrive.CREDS_SESSION_KEY])
     return await utils.make_response_with_heartbeat(
-        gdrive.asearch_files(credentials=credentials, file_name=query, file_type=mime_type),
+        gdrive.asearch_files(credentials=credentials,
+                             file_name=query, file_type=mime_type),
         log_label='Doc search'
     )
 
@@ -410,7 +415,8 @@ async def ingest_from_gdrive():
         return jsonify(_wrong_payload_response()), 400
 
     files = post.get('files')
-    credentials = google.oauth2.credentials.Credentials(**session[gdrive.CREDS_SESSION_KEY])
+    credentials = google.oauth2.credentials.Credentials(
+        **session[gdrive.CREDS_SESSION_KEY])
     return await utils.make_response_with_heartbeat(
         app.gdrive_simon_client.ingest_gdrive_file_set(credentials, files),
         log_label='Simon ingest from Google Drive'
@@ -442,11 +448,20 @@ async def ask_llm():
         )
     elif llm_choice == 'davinci-2023-08-14':
         return await utils.make_response_with_heartbeat(
-            gpt.ask_ft_gpt(query, model='davinci:ft-ideaflow-2023-08-14-01-33-40'),
+            gpt.ask_ft_gpt(
+                query, model='davinci:ft-ideaflow-2023-08-14-01-33-40'),
             log_label='Fine-tuned GPT query'
         )
     else:
         return jsonify({'status': 'error', 'message': 'invalid llm choice'}), 400
+
+
+NEO4J_CONSOLE_URL = 'https://workspace-preview.neo4j.io/?connectURL=neo4j%2Bs%3A%2F%2Fneo4j%4020d077bf.databases.neo4j.io%3A7687&instanceName=Paper2Graph&ntid=auth0%7C6482ae0be0fef058d606edfb&_ga=2.164858559.108545494.1687387686-1365613772.1686597025'
+
+
+@app.route('/neo4j')
+async def neo4j_page():
+    return redirect(NEO4J_CONSOLE_URL)
 
 
 def _setup_nav_links(app_mode='paper2graph'):
@@ -467,6 +482,7 @@ def _setup_nav_links(app_mode='paper2graph'):
         {'name': 'Batch Processing', 'url': '/batch'},
         {'name': 'Query', 'url': '/query'},
         {'name': 'Ingest', 'url': '/gdrive'},
+        {'name': 'Neo4j', 'url':  '/neo4j'},
     ]
     if app.config.get('PAPERS_DIR'):
         nav_links.insert(3, {'name': 'Search', 'url': '/search'})
@@ -501,7 +517,8 @@ async def simon_setup():
 
 @app.before_serving
 async def gdrive_ingest_setup():
-    app.gdrive_simon_client = simon_client.SimonClient(app.config, uid_override='querymydrive')
+    app.gdrive_simon_client = simon_client.SimonClient(
+        app.config, uid_override='querymydrive')
 
 
 @app.before_serving
@@ -513,7 +530,8 @@ async def search_setup():
 
     # Walk papers_dir and count all .txt files
     # Only do this once, at server startup, because it may be slow for very large numbers of files
-    log_msg(f'Counting papers in {papers_dir} that will be available for /search...')
+    log_msg(
+        f'Counting papers in {papers_dir} that will be available for /search...')
     paper_count = 0
     for _, _, files in os.walk(papers_dir):
         paper_count += len([file for file in files if os.path.splitext(file)[1] == ".txt"])

@@ -19,14 +19,18 @@ from utils import log_msg
 class SimonClient:
     def __init__(self, config, uid_override=None):
         self.config = config
-        self._context = self._agent_context_from_config(config, uid_override=uid_override)
+        self._context = self._agent_context_from_config(
+            config, uid_override=uid_override)
         self._search_client = Search(self._context)
 
     def _agent_context_from_config(self, config, uid_override=None):
         openai_api_key = config['OPENAI_API_KEY']
-        llm = ChatOpenAI(openai_api_key=openai_api_key, model_name="gpt-3.5-turbo", temperature=0)
-        reason_llm = ChatOpenAI(openai_api_key=openai_api_key, model_name="gpt-4", temperature=0)
-        embedding = OpenAIEmbeddings(openai_api_key=openai_api_key, model="text-embedding-ada-002")
+        llm = ChatOpenAI(openai_api_key=openai_api_key,
+                         model_name="gpt-3.5-turbo", temperature=0)
+        reason_llm = ChatOpenAI(
+            openai_api_key=openai_api_key, model_name="gpt-4", temperature=0)
+        embedding = OpenAIEmbeddings(
+            openai_api_key=openai_api_key, model="text-embedding-ada-002")
 
         pg = connect(**config['postgres'])
 
@@ -44,14 +48,16 @@ class SimonClient:
         result = await asyncio.to_thread(lambda: self._search_client.query(query))
         b = time.time()
         res_for_logs = json.dumps(result, indent=2)
-        logging.info(f'Simon query completed in {(a-b):.2f} seconds. Result:\n{res_for_logs}')
+        logging.info(
+            f'Simon query completed in {(a-b):.2f} seconds. Result:\n{res_for_logs}')
 
         return result
 
     async def ingest_gdrive_file(self, gdrive_creds, file_id, max_retries=3):
         file = await gdrive.aget_file(credentials=gdrive_creds, file_id=file_id)
         if file is None:
-            logging.error(f'Failed to get file with id {file_id}, skipping ingestion')
+            logging.error(
+                f'Failed to get file with id {file_id}, skipping ingestion')
             return
         file_name = file['metadata']['name']
         logging.info(f'Parsing file {file_name} ({file_id})...')
@@ -62,7 +68,8 @@ class SimonClient:
                 break
             except Exception as err:
                 retries += 1
-                logging.error(f'Error while parsing file {file_name} ({file_id}): {err}')
+                logging.error(
+                    f'Error while parsing file {file_name} ({file_id}): {err}')
                 continue
 
         if retries == max_retries:
@@ -79,7 +86,8 @@ class SimonClient:
                 break
             except Exception as err:
                 retries += 1
-                logging.error(f'Error while indexing file {file_name} ({file_id}): {err}')
+                logging.error(
+                    f'Error while indexing file {file_name} ({file_id}): {err}')
                 continue
 
         if retries == max_retries:
@@ -102,7 +110,8 @@ if __name__ == '__main__':
     client = SimonClient(config)
 
     start_time = time.time()
-    result = asyncio.run(client.query_simon("What do I know about vestibular migraines?"))
+    result = asyncio.run(client.query_simon(
+        "What do I know about vestibular migraines?"))
     end_time = time.time()
     print(f'Simon query completed in {end_time - start_time:.2f} seconds')
     print(f'Query result:\n{json.dumps(result, indent=2)}')
