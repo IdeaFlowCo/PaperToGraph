@@ -25,7 +25,11 @@ def load_config(cl_args=None):
     }
     config_vars['logger'] = logger_config
 
+    use_iam_role = config_vars.pop('AWS_USE_IAM_ROLE', False)
+    if isinstance(use_iam_role, str):
+        use_iam_role = use_iam_role.lower() == 'true'
     aws_config = {
+        'aws_use_iam_role': use_iam_role,
         'aws_access_key_id': config_vars.pop('AWS_ACCESS_KEY_ID', None),
         'aws_secret_access_key': config_vars.pop('AWS_SECRET_ACCESS_KEY', None),
         'aws_session_token': config_vars.pop('AWS_SESSION_TOKEN', None),
