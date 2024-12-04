@@ -98,6 +98,7 @@
         jobLogEventStream.onmessage = (event) => {
             console.log(event);
             const eventData = event.data.trim();
+
             if (eventData === 'done') {
                 jobLogEventStream.close();
                 cancelJobButton.disabled = true;
@@ -106,13 +107,35 @@
                 jobCompleteMsg.classList.remove('hidden');
                 return;
             }
-            if (eventData != 'nodata') {
+
+            if (eventData !== 'nodata') {
                 jobLogs.innerHTML += eventData + '<br>';
                 // Scroll to bottom of page in case logs div container is too big
                 window.scrollTo(0, document.body.scrollHeight);
+
+                // Extract output URI from eventData if this was a parse job
+                if (document.querySelector('input[name="job-type"]:checked').value === 'parse') {
+                    if (eventData.includes('Output URI:')) {
+                        const outputUri = eventData.split('Output URI:')[1].trim();
+                        const outputUriElement = document.querySelector('#job-output-uri');
+                        outputUriElement.textContent = outputUri;
+                        // Make the URI clickable to select
+                        outputUriElement.addEventListener('click', () => {
+                            const range = document.createRange();
+                            range.selectNode(outputUriElement);
+                            const selection = window.getSelection();
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                        });
+                        // Show the output URI container
+                        document.querySelector('#output-uri-container').classList.remove('hidden');
+                    }
+                }
             }
-        }
-    }
+        };
+    };
+
+
 
 
     const handleSubmitClick = async () => {

@@ -79,7 +79,7 @@
     const resetButtonStates = () => {
         searchButton.disabled = false;
         addToListButton.disabled = !searchResultsList.innerHTML.trim();
-        // newBatchCreateButton.disabled = !newBatchList.innerHTML.trim();
+        newBatchCreateButton.disabled = !newBatchList.innerHTML.trim();
         ingestToSimonButton.disabled = !newBatchList.innerHTML.trim();
         newBatchDedupeButton.disabled = !newBatchList.innerHTML.trim();
     }
