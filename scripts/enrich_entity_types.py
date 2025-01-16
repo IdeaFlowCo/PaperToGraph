@@ -9,16 +9,18 @@ from utils import log_msg, log_debug
 
 
 ENTITY_TYPES = {
-    'Drug',
-    'Disease',
-    'Other',
+    "Drug",
+    "Disease",
+    "Other",
 }
 
 
 def get_all_entity_names(neo4j_driver):
     with neo4j_driver.session() as session:
-        result = session.run("MATCH (n:Entity) WHERE n.type IS NULL RETURN n.name LIMIT 300")
-        return [record['n.name'] for record in result]
+        result = session.run(
+            "MATCH (n:Entity) WHERE n.type IS NULL RETURN n.name LIMIT 300"
+        )
+        return [record["n.name"] for record in result]
 
 
 async def get_entity_types_from_gpt(entity_names, gpt_model):
@@ -59,7 +61,8 @@ def update_entity_types(neo4j_driver, ent_name_type_pairs):
                 "RETURN n",
                 normalized_name=n_ent_name,
                 ent_type=ent_type,
-                timestamp=mod_timestamp)
+                timestamp=mod_timestamp,
+            )
             if result.peek() is not None:
                 update_count += 1
     return update_count
@@ -70,39 +73,39 @@ async def main(args):
     threading.current_thread().setName(thread_name)
 
     config = utils.environment.load_config(cl_args=args)
-    utils.setup_logger(name=thread_name, **config['logger'])
-    log_msg('Logger initialized')
+    utils.setup_logger(name=thread_name, **config["logger"])
+    log_msg("Logger initialized")
 
     gpt.init_module(config)
-    driver = neo.get_neo4j_driver(config['neo4j'])
+    driver = neo.get_neo4j_driver(config["neo4j"])
 
     try:
         entity_names = get_all_entity_names(driver)
         while entity_names:
-            log_msg(f'Loaded {len(entity_names)} entities to tag with types.')
+            log_msg(f"Loaded {len(entity_names)} entities to tag with types.")
 
-            log_msg('Using GPT to get entity types for each...')
-            name_type_pairs = await get_entity_types_from_gpt(entity_names, args.gpt_model)
-            log_msg(f'Received {len(name_type_pairs)} name/type pairs from GPT.')
+            log_msg("Using GPT to get entity types for each...")
+            name_type_pairs = await get_entity_types_from_gpt(
+                entity_names, args.gpt_model
+            )
+            log_msg(f"Received {len(name_type_pairs)} name/type pairs from GPT.")
 
-            log_msg('Updating entity types in Neo4j...')
+            log_msg("Updating entity types in Neo4j...")
             num_updated = update_entity_types(driver, name_type_pairs)
-            log_msg(f'Set types on {num_updated} entities.')
+            log_msg(f"Set types on {num_updated} entities.")
 
             entity_names = get_all_entity_names(driver)
 
-        log_msg('Done!')
+        log_msg("Done!")
     finally:
         driver.close()
 
 
 def parse_args(args):
-    parser = argparse.ArgumentParser(description='Enrich entity types with GPT')
+    parser = argparse.ArgumentParser(description="Enrich entity types with GPT")
 
     parser.add_argument(
-        '--gpt_model',
-        default='gpt-3.5-turbo',
-        help='Name of the GPT model to use'
+        "--gpt_model", default="gpt-4o-mini", help="Name of the GPT model to use"
     )
     utils.add_logger_args(parser)
     utils.add_neo_credential_override_args(parser)

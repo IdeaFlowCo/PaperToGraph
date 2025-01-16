@@ -1,6 +1,6 @@
-'''
+"""
 Utilities for splitting processing into groups of async tasks.
-'''
+"""
 
 import asyncio
 import json
@@ -10,9 +10,9 @@ from utils import log_msg
 
 
 async def create_and_run_tasks(task_inputs, work_fn, task_label, max_simul_tasks=8):
-    '''
+    """
     Create separate tasks for each input in task_inputs and run them in parallel.
-    '''
+    """
     tasks = []
     tasks_created = 0
     tasks_completed = 0
@@ -24,7 +24,9 @@ async def create_and_run_tasks(task_inputs, work_fn, task_label, max_simul_tasks
         tasks.append(new_task)
         tasks_created += 1
 
-    log_msg(f'{task_label}: {tasks_completed} of {total_tasks} tasks completed ({len(tasks)} currently running)')
+    log_msg(
+        f"{task_label}: {tasks_completed} of {total_tasks} tasks completed ({len(tasks)} currently running)"
+    )
 
     while tasks_completed < len(task_inputs):
         # Wait for any of the running tasks to complete
@@ -44,16 +46,21 @@ async def create_and_run_tasks(task_inputs, work_fn, task_label, max_simul_tasks
             tasks.append(task)
             tasks_created += 1
 
-        log_msg(f'{task_label}: {tasks_completed} of {total_tasks} tasks completed ({len(tasks)} currently running)')
+        log_msg(
+            f"{task_label}: {tasks_completed} of {total_tasks} tasks completed ({len(tasks)} currently running)"
+        )
 
 
 def create_task_of_tasks(task_inputs, work_fn, task_label, max_simul_tasks=8):
-    '''
+    """
     Create subtasks for each input in task_inputs and return a task that will complete when all subtasks are complete.
-    '''
+    """
+
     async def gather_results():
         results = []
-        async for task_result in create_and_run_tasks(task_inputs, work_fn, task_label, max_simul_tasks=max_simul_tasks):
+        async for task_result in create_and_run_tasks(
+            task_inputs, work_fn, task_label, max_simul_tasks=max_simul_tasks
+        ):
             results.append(task_result)
         return results
 
@@ -61,15 +68,13 @@ def create_task_of_tasks(task_inputs, work_fn, task_label, max_simul_tasks=8):
 
 
 async def split_and_run_tasks_with_heartbeat(task_inputs, work_fn, task_label):
-    '''
+    """
     Create separate tasks for each input and await completion while yielding occasional heartbeat messages.
-    '''
-    log_msg('Sending connection heartbeat')
-    yield ' '
+    """
+    log_msg("Sending connection heartbeat")
+    yield " "
     all_tasks = create_task_of_tasks(
-        task_inputs=task_inputs,
-        work_fn=work_fn,
-        task_label=task_label
+        task_inputs=task_inputs, work_fn=work_fn, task_label=task_label
     )
     results = None
     times_checked = 0
@@ -81,10 +86,10 @@ async def split_and_run_tasks_with_heartbeat(task_inputs, work_fn, task_label):
         times_checked += 1
         if times_checked > 4:
             times_checked = 0
-            log_msg('Sending connection heartbeat')
-            yield ' '
+            log_msg("Sending connection heartbeat")
+            yield " "
         await asyncio.sleep(2)
-    log_msg('All parsing complete')
+    log_msg("All parsing complete")
 
     result = []
     for result_str in results:
