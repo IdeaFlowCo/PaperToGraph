@@ -9,3 +9,4 @@ boto3~=1.28.15
 google-api-python-client~=2.97.0
 google_auth_oauthlib~=1.0.0
 simon-search==0.0.2
+markitdown==1.0.0

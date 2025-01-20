@@ -1,11 +1,13 @@
 import asyncio
 import json
+import os
+import tempfile
 
 import aws
 import gpt
 import parse
 import utils
-from utils import log_msg
+from utils import doc_convert, log_msg
 
 
 class BatchParseJob:
@@ -34,13 +36,35 @@ class BatchParseJob:
         log_msg(f"Fetching file {file_uri}")
         file_name, data = aws.read_file_from_s3(file_uri)
         log_msg(f"Loaded {len(data)} bytes")
+
+        # If file is PDF or other document format, convert it to text
+        if isinstance(data, bytes) and file_name.lower().endswith(
+            (".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx")
+        ):
+            with tempfile.NamedTemporaryFile(
+                suffix=os.path.splitext(file_name)[1], delete=False
+            ) as temp_file:
+                temp_file.write(data)  # Write raw bytes directly
+                temp_path = temp_file.name
+            try:
+                data = doc_convert.convert_to_text(temp_path)
+                log_msg(f"Converted document to {len(data)} bytes of text")
+            finally:
+                os.unlink(temp_path)  # Clean up temp file
+
         return file_name, data
 
     async def __process_file(self, file_uri):
         try:
             input_file_name, input_data = await self.__fetch_input_file(file_uri)
-        except UnicodeDecodeError:
-            log_msg(f"Could not decode file {file_uri} as UTF-8. Skipping.")
+
+            # At this point input_data should be text, either from a text file or converted from a document
+            if not isinstance(input_data, str):
+                log_msg(f"Could not convert file {file_uri} to text. Skipping.")
+                return
+
+        except Exception as e:
+            log_msg(f"Error processing file {file_uri}: {e}")
             return
 
         file_output_uri = aws.create_output_dir_for_file(
@@ -71,7 +95,7 @@ class BatchParseJob:
         self, input_chunk, output_data, file_output_uri, output_num
     ):
         input_chunk_uri = (
-            f'{file_output_uri.rstrip("/")}/output_{output_num}.source.txt'
+            f"{file_output_uri.rstrip('/')}/output_{output_num}.source.txt"
         )
         log_msg(f"Writing input chunk {output_num} to {input_chunk_uri}")
         if self.dry_run:
@@ -79,7 +103,7 @@ class BatchParseJob:
         else:
             aws.write_to_s3_file(input_chunk_uri, input_chunk)
 
-        output_chunk_uri = f'{file_output_uri.rstrip("/")}/output_{output_num}.json'
+        output_chunk_uri = f"{file_output_uri.rstrip('/')}/output_{output_num}.json"
         log_msg(f"Writing output chunk {output_num} to {output_chunk_uri}")
         if self.dry_run:
             log_msg(f"Would have written {len(output_data)} bytes")
@@ -96,7 +120,7 @@ class BatchParseJob:
             log_msg(f"Would have written {len(input_data)} bytes")
             return
 
-        copied_file_uri = f'{output_folder_uri.rstrip("/")}/source.txt'
+        copied_file_uri = f"{output_folder_uri.rstrip('/')}/source.txt"
         aws.write_to_s3_file(copied_file_uri, input_data)
 
     async def __write_job_args_to_output_folder(self, data_source, output_uri_arg):
@@ -153,7 +177,7 @@ class BatchParseJob:
         try:
             for i, input_file in enumerate(input_files):
                 log_msg(
-                    f"********* Processing file {input_file} ({i+1} out of {len(input_files)})"
+                    f"********* Processing file {input_file} ({i + 1} out of {len(input_files)})"
                 )
                 await self.__process_file(input_file)
 
