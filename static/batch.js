@@ -56,7 +56,7 @@
 
     const buildSubmitBody = () => {
         const dataSource = dataSourceInput.value;
-        const jobType = document.querySelector('input[name="job-type"]:checked').value;
+        const jobType = document.querySelector('input[name="job-type"]:checked')?.value;
         const body = {
             'job_type': jobType,
             'data_source': dataSource,
@@ -66,28 +66,47 @@
         if (jobType === 'parse') {
             const model = document.querySelector('input[name="model-select"]:checked')?.value ?? 'any';
             extraArgs['model'] = model;
-            if (dryRunCheckbox.checked) {
+            if (dryRunCheckbox?.checked) {
                 extraArgs['dry_run'] = true;
             }
-            if (overrideParseOutput.checked) {
-                extraArgs['output_uri'] = document.querySelector('#parse-output-uri').value;
+            if (overrideParseOutput?.checked) {
+                const outputUri = document.querySelector('#parse-output-uri')?.value;
+                if (outputUri) extraArgs['output_uri'] = outputUri;
             }
-            if (overridePromptCheckbox.checked) {
-                extraArgs['prompt'] = document.querySelector('#parse-prompt-text').value;
+            if (overridePromptCheckbox?.checked) {
+                const prompt = document.querySelector('#parse-prompt-text')?.value;
+                if (prompt) extraArgs['prompt'] = prompt;
             }
         } else if (jobType === 'save') {
-            if (overrideNeoUri.checked) {
-                extraArgs['neo_uri'] = document.querySelector('#neo-uri').value;
-            }
-            if (overrideNeoUser.checked) {
-                extraArgs['neo_user'] = document.querySelector('#neo-user').value;
-            }
-            if (overrideNeoPass.checked) {
-                extraArgs['neo_pass'] = document.querySelector('#neo-pass').value;
+            try {
+                if (overrideNeoUri?.checked) {
+                    const neoUri = document.querySelector('#neo-uri')?.value;
+                    if (neoUri) {
+                        extraArgs['neo_uri'] = neoUri;
+                    }
+                }
+                if (overrideNeoUser?.checked) {
+                    const neoUser = document.querySelector('#neo-user')?.value;
+                    if (neoUser) {
+                        extraArgs['neo_user'] = neoUser;
+                    }
+                }
+                if (overrideNeoPass?.checked) {
+                    const neoPass = document.querySelector('#neo-pass')?.value;
+                    if (neoPass) {
+                        extraArgs['neo_pass'] = neoPass;
+                    }
+                }
+            } catch (e) {
+                console.error('Error collecting Neo4j parameters:', e);
             }
         }
 
-        return Object.assign({}, body, extraArgs);
+        const finalBody = Object.assign({}, body, extraArgs);
+        console.log('Submitting job with args:', {
+            finalBody
+        });
+        return finalBody;
     }
 
     const jobLogs = document.querySelector('#job-logs');

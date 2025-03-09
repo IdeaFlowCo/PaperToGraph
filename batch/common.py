@@ -122,8 +122,8 @@ def make_and_run_save_job(job_args, neo_config):
         neo_config['uri'] = job_args['neo_uri']
     if 'neo_user' in job_args:
         neo_config['user'] = job_args['neo_user']
-    if 'neo_password' in job_args:
-        neo_config['password'] = job_args['neo_password']
+    if 'neo_pass' in job_args:
+        neo_config['password'] = job_args['neo_pass']
 
     def work_fn(): return save.save_to_neo4j(data_source, neo_config)
 

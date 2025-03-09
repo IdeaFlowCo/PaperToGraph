@@ -37,12 +37,20 @@ def get_neo4j_driver(neo_config):
     user = neo_config['user']
     password = neo_config['password']
 
+    def mask_password(pwd):
+        if not pwd:
+            return '***'
+        if len(pwd) <= 6:
+            return '*' * len(pwd)
+        return pwd[:2] + '...' + pwd[-2:]
+
     params_for_log = {
         'uri': uri,
         'user': user,
-        'password': password[:3] + '...' + password[-3:]
+        'password': mask_password(password),
+        'password_length': len(password) if password else 0
     }
-    log_msg(f'Connecting to Neo4j database with the following parameters:\n{json.dumps(params_for_log, indent=2)}')
+    log_msg(f'Connecting to Neo4j database with parameters:\n{json.dumps(params_for_log, indent=2)}')
 
     # Create a Neo4j driver instance
     return GraphDatabase.driver(uri, auth=(user, password))
