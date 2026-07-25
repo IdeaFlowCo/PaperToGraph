@@ -10,11 +10,17 @@ import random
 import openai
 import tiktoken
 
+import google.generativeai as genai
+
 import utils
 from utils import log_msg, log_debug
 
 
 VALID_GPT_MODELS = [
+    # Google Gemini models (default provider)
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    # OpenAI models (currently non-functional: org deactivated, but kept selectable)
     "gpt-3.5-turbo",
     "gpt-3.5-turbo-16k",
     "gpt-4",
@@ -22,17 +28,21 @@ VALID_GPT_MODELS = [
     "gpt-4o",
     "gpt-4o-mini",
 ]
-DEFAULT_GPT_MODEL = "gpt-3.5-turbo"
+DEFAULT_GPT_MODEL = "gemini-2.5-flash"
 
 
 def init_module(config):
     openai.api_key = config.get("OPENAI_API_KEY", None)
     log_msg(f"Using OpenAI API key: {utils.secret_to_log_str(openai.api_key)}")
 
+    gemini_api_key = config.get("GEMINI_API_KEY", None)
+    genai.configure(api_key=gemini_api_key)
+    log_msg(f"Using Gemini API key: {utils.secret_to_log_str(gemini_api_key)}")
+
 
 def sanitize_gpt_model_choice(model):
     if model not in VALID_GPT_MODELS:
-        model = "gpt-3.5-turbo"
+        model = "gemini-2.5-flash"
     return model
 
 
@@ -86,6 +96,11 @@ def clean_json(response):
 
 
 def get_token_length(text, model="gpt-3.5-turbo"):
+    if model.startswith("gemini"):
+        # tiktoken doesn't know about Gemini models (encoding_for_model raises
+        # KeyError). Use a cheap heuristic (~4 chars/token) rather than a network
+        # call for token counting.
+        return max(1, len(text) // 4)
     encoding = tiktoken.encoding_for_model(model)
     text_as_tokens = encoding.encode(text)
     return len(text_as_tokens)
@@ -114,7 +129,10 @@ def split_input_list_to_chunks(input_list, max_chunk_tokens, model="gpt-3.5-turb
 
 def get_context_window_size(model):
     # Can see max context size for different models here: https://platform.openai.com/docs/models/overview
-    if model == "gpt-4o" or model == "gpt-4o-mini":
+    if model.startswith("gemini"):
+        # Gemini 2.x flash models support a 1M-token context window.
+        max_context_tokens = 1048576
+    elif model == "gpt-4o" or model == "gpt-4o-mini":
         max_context_tokens = 128000
     elif model == "gpt-4-32k":
         max_context_tokens = 32768
@@ -131,6 +149,10 @@ def get_context_window_size(model):
 
 def get_max_requests_per_minute(model):
     # All rate limits can be found at https://platform.openai.com/docs/guides/rate-limits/what-are-the-rate-limits-for-our-api
+    if model.startswith("gemini"):
+        # Conservative request cap for Gemini models.
+        return 300.0
+
     if model == "gpt-4o":
         # 500 RPM
         requests_per_minute_limit = 500.0
@@ -191,6 +213,133 @@ def get_rl_backoff_time(model):
     return delay
 
 
+def _postprocess_result(result, params):
+    """
+    Shared post-processing for both the OpenAI and Gemini branches.
+
+    `result` is the plain-string model output. This handles the skip-message
+    short-circuit and the optional `expect_json_result` -> `clean_json` flow,
+    including the "retry / skip_on_error" semantics when the output isn't JSON.
+
+    Returns either a final value (str) or the sentinel object RETRY to signal
+    that the caller should re-issue the request with decremented retries.
+    """
+    skip_msg = params["skip_msg"]
+    expect_json_result = params["expect_json_result"]
+    retries_remaining = params["retries_remaining"]
+    skip_on_error = params["skip_on_error"]
+
+    if result == skip_msg:
+        log_msg(
+            f'Model returned designated skip message "{skip_msg}". Returning empty string for this block.'
+        )
+        return ""
+
+    if not expect_json_result:
+        return result
+
+    result, is_valid = clean_json(result)
+    log_debug(f"Cleaned response data: \n{result}")
+    if not is_valid:
+        if retries_remaining > 0:
+            return _RETRY
+        if skip_on_error:
+            log_msg(
+                "Doesn't look like the model gave us JSON. "
+                "No retries left and skip_on_error=true, so returning blank to contain damages."
+            )
+            return ""
+    return result
+
+
+# Sentinel used by _postprocess_result to request a retry from the caller.
+_RETRY = object()
+
+
+async def _async_fetch_from_gemini(params):
+    """
+    Fetch a response from Google Gemini, mapping the OpenAI-style `messages`
+    interface onto Gemini's system_instruction + contents model.
+    """
+    messages = params["messages"]
+    log_label = params["log_label"]
+    model = params["model"]
+    max_tokens = params["max_tokens"]
+    timeout = params["timeout"]
+    skip_on_error = params["skip_on_error"]
+    retries_remaining = params["retries_remaining"]
+    expect_json_result = params["expect_json_result"]
+    response_format = params["response_format"]
+
+    # Split OpenAI-style messages into a joined system instruction and a joined
+    # user/assistant prompt. Keep it simple and correct rather than clever.
+    system_parts = []
+    content_parts = []
+    for msg in messages:
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
+        if content is None:
+            content = ""
+        if role == "system":
+            system_parts.append(content)
+        else:
+            content_parts.append(content)
+    system_instruction = "\n\n".join(p for p in system_parts if p) or None
+    prompt = "\n\n".join(content_parts)
+
+    generation_config = {"temperature": 0.4}
+    if max_tokens:
+        generation_config["max_output_tokens"] = max_tokens
+    # Honor JSON requests from either the OpenAI-style response_format or the
+    # expect_json_result flag.
+    wants_json = expect_json_result or bool(response_format)
+    if wants_json:
+        generation_config["response_mime_type"] = "application/json"
+
+    try:
+        log_msg(f"[{log_label}] Sending request to Gemini...")
+        model_obj = genai.GenerativeModel(
+            model_name=model,
+            system_instruction=system_instruction,
+        )
+        response = await asyncio.wait_for(
+            model_obj.generate_content_async(
+                prompt,
+                generation_config=generation_config,
+            ),
+            timeout=timeout,
+        )
+    except TimeoutError as err:
+        if retries_remaining > 0:
+            log_msg(f"Gemini request timeout. Trying again...")
+            params["retries_remaining"] = retries_remaining - 1
+            return await async_fetch_from_openai(**params)
+        log_msg(f"Gemini request timeout. Out of retries, abandoning request.")
+        if skip_on_error:
+            return ""
+        raise err
+    except BaseException as err:
+        log_msg(f"Error encountered during Gemini API call: {err}")
+        if retries_remaining:
+            log_msg(f"Trying again...")
+            params["retries_remaining"] = retries_remaining - 1
+            return await async_fetch_from_openai(**params)
+        if skip_on_error:
+            return ""
+        raise err
+
+    result = response.text.strip()
+    log_msg(f"Received response from Gemini")
+    log_debug(f"Response data: \n{result}")
+
+    outcome = _postprocess_result(result, params)
+    if outcome is _RETRY:
+        log_msg("Doesn't look like Gemini gave us JSON. Trying again...")
+        params["retries_remaining"] = retries_remaining - 1
+        return await async_fetch_from_openai(**params)
+    return outcome
+
+
 async def async_fetch_from_openai(
     messages,
     log_label="GPT",
@@ -204,7 +353,8 @@ async def async_fetch_from_openai(
     retries_remaining=2,
 ):
     """
-    Fetch a response from OpenAI's API with error handling and retries.
+    Fetch a response from the configured LLM provider with error handling and
+    retries. Routes to Gemini for "gemini*" models and to OpenAI otherwise.
     """
     # Wrap all parameters into a dictionary so we can pass them around easily
     params = {
@@ -219,6 +369,10 @@ async def async_fetch_from_openai(
         "expect_json_result": expect_json_result,
         "response_format": response_format,
     }
+
+    # Route Gemini models to the Gemini implementation.
+    if model.startswith("gemini"):
+        return await _async_fetch_from_gemini(params)
 
     rate_limit_errors = 0
 

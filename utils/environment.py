@@ -25,6 +25,12 @@ def load_config(cl_args=None):
     }
     config_vars['logger'] = logger_config
 
+    # LLM provider API keys. Like OPENAI_API_KEY, these are left in config_vars
+    # (not popped) so they can be read directly by name downstream. Set defaults
+    # to None so the keys always exist even when unset in env/.env.
+    config_vars.setdefault('OPENAI_API_KEY', None)
+    config_vars.setdefault('GEMINI_API_KEY', None)
+
     use_iam_role = config_vars.pop('AWS_USE_IAM_ROLE', False)
     if isinstance(use_iam_role, str):
         use_iam_role = use_iam_role.lower() == 'true'
