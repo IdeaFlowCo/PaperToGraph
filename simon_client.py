@@ -3,8 +3,7 @@ import json
 import logging
 import time
 
-from langchain.chat_models import ChatOpenAI
-from langchain.embeddings import OpenAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
 from psycopg2 import connect
 
@@ -24,13 +23,13 @@ class SimonClient:
         self._search_client = Search(self._context)
 
     def _agent_context_from_config(self, config, uid_override=None):
-        openai_api_key = config['OPENAI_API_KEY']
-        llm = ChatOpenAI(openai_api_key=openai_api_key,
-                         model_name="gpt-3.5-turbo", temperature=0)
-        reason_llm = ChatOpenAI(
-            openai_api_key=openai_api_key, model_name="gpt-4", temperature=0)
-        embedding = OpenAIEmbeddings(
-            openai_api_key=openai_api_key, model="text-embedding-ada-002")
+        gemini_api_key = config['GEMINI_API_KEY']
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash", google_api_key=gemini_api_key, temperature=0)
+        reason_llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash", google_api_key=gemini_api_key, temperature=0)
+        embedding = GoogleGenerativeAIEmbeddings(
+            model="models/text-embedding-004", google_api_key=gemini_api_key)
 
         pg = connect(**config['postgres'])
 

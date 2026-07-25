@@ -3,6 +3,13 @@ quart==0.20.0
 hypercorn==0.14.3
 openai~=0.27.8
 tiktoken~=0.4.0
+# Google Gemini provider (default). google-generativeai is the SDK used directly
+# by gpt/common.py (GenerativeModel / generate_content_async / system_instruction /
+# response_mime_type). langchain-google-genai 1.0.x is the pre-4.0 line that still
+# rides on google-generativeai (not the newer google-genai SDK) and pairs with the
+# legacy langchain that simon-search==0.0.2 brings in transitively.
+google-generativeai~=0.8.5
+langchain-google-genai~=1.0.6
 neo4j==5.9.0
 sentry-sdk~=1.45.1
 boto3~=1.28.15
