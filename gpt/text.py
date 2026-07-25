@@ -60,17 +60,25 @@ def split_to_size(text: str, limit=TEXT_BLOCK_SIZE_LIMIT):
     return rechunked_text
 
 
+def _encoding_for_model(model):
+    """
+    Return a tiktoken encoding for the given model. tiktoken only knows OpenAI
+    models, so for gpt-4o and non-OpenAI providers (e.g. Gemini) we fall back to
+    cl100k_base as a reasonable proxy tokenizer for counting/chunking.
+    """
+    if model.startswith("gpt-4o") or model.startswith("gemini"):
+        return tiktoken.get_encoding("cl100k_base")
+    try:
+        return tiktoken.encoding_for_model(model)
+    except KeyError:
+        return tiktoken.get_encoding("cl100k_base")
+
+
 def get_token_length(text, model="gpt-3.5-turbo"):
     """
     Returns the number of tokens in the given text for the specified model.
     """
-    # Map new model names to their base tokenizer
-    if model.startswith("gpt-4o"):
-        encoding = tiktoken.get_encoding(
-            "cl100k_base"
-        )  # GPT-4 and ChatGPT use cl100k_base
-    else:
-        encoding = tiktoken.encoding_for_model(model)
+    encoding = _encoding_for_model(model)
     text_as_tokens = encoding.encode(text)
     return len(text_as_tokens)
 
@@ -78,7 +86,7 @@ def get_token_length(text, model="gpt-3.5-turbo"):
 def __split_paragraph_to_token_size(
     paragraph: str, token_limit: int, model="gpt-3.5-turbo"
 ):
-    encoding = tiktoken.encoding_for_model(model)
+    encoding = _encoding_for_model(model)
     text_as_tokens = encoding.encode(paragraph)
     text_chunks = []
     # Make each chunk 10 tokens smaller than the limit, to leave some room for error
